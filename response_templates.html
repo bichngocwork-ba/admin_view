@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Response Templates // Agent Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: {
+                    "error": "#ba1a1a", "error-container": "#ffdad6", "on-error-container": "#93000a",
+                    "primary-container": "#2563eb", "background": "#f6faff", "on-background": "#141d23",
+                    "on-primary": "#ffffff", "on-surface": "#141d23", "outline-variant": "#bcc9ce",
+                    "secondary-container": "#dee0e4", "on-secondary-container": "#606366",
+                    "primary": "#004ac6", "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#3d494d", "surface-container": "#e6eff8",
+                    "surface-container-high": "#e0e9f2", "surface-container-low": "#ecf5fe",
+                    "surface": "#f6faff", "inverse-surface": "#293138", "inverse-on-surface": "#e9f2fb",
+                    dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
+                        "surface-container-high": "#1f2d3a", "surface-container-low": "#0d161d",
+                        "on-surface": "#f0f4f8", "on-surface-variant": "#a0b2c1",
+                        "outline-variant": "#344859" }
+                },
+                spacing: { "xl":"48px","sm":"16px","base":"4px","md":"24px","gutter":"24px","xs":"8px","container-max":"1440px","lg":"32px" },
+                fontFamily: { "sans": ["Inter","sans-serif"], "headline": ["Inter","sans-serif"] }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script src="supabase-helper.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8]">
+
+    <div id="nav-container"></div>
+
+    <div class="pt-[64px] overflow-y-auto h-screen">
+        <main class="p-lg max-w-container-max mx-auto space-y-lg">
+            <!-- Page Header -->
+            <div class="flex justify-between items-end border-b border-outline-variant dark:border-[#344859] pb-md">
+                <div>
+                    <h1 class="font-headline font-extrabold text-2xl text-on-surface dark:text-[#f0f4f8] tracking-tight uppercase">RESPONSE TEMPLATES</h1>
+                    <p class="text-xs text-on-surface-variant dark:text-[#a0b2c1]">Manage and deploy standardized communication protocols for players</p>
+                </div>
+                <a href="add_response_template.html" class="bg-primary hover:brightness-110 text-white px-md py-2 rounded-lg text-xs font-bold flex items-center gap-xs hover:bg-[#003ea8] transition-all shadow-md active:scale-95">
+                    <span class="material-symbols-outlined text-[16px]">add</span>
+                    ADD TEMPLATE
+                </a>
+            </div>
+
+            <!-- Search Row -->
+            <div class="flex gap-md">
+                <div class="flex-grow flex items-center bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-lg px-md py-2 shadow-sm focus-within:border-primary transition-all">
+                    <span class="material-symbols-outlined text-outline" style="font-size: 20px;">search</span>
+                    <input id="template-search-input" class="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface dark:text-[#f0f4f8] ml-xs outline-none focus:outline-none" placeholder="Search templates by keywords..." type="text" oninput="applyTemplateFilters()">
+                </div>
+            </div>
+
+            <!-- Statistics Dashboard -->
+            <div id="template-stats-dashboard" class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                <!-- Card 1: Total Templates (Blue theme) -->
+                <div class="bg-blue-50/80 dark:bg-[#0f1d2e] p-md rounded-xl border border-blue-200/40 dark:border-blue-900/40 shadow-sm transition-all hover:shadow-md">
+                    <p class="font-bold text-[9px] text-blue-700 dark:text-blue-300 uppercase tracking-widest">Total Templates</p>
+                    <p id="total-template-count" class="text-2xl font-extrabold mt-1 text-blue-900 dark:text-blue-100">0</p>
+                </div>
+                <!-- Card 2: Drafts (Red theme) -->
+                <div class="bg-red-50/80 dark:bg-[#2b161b] p-md rounded-xl border border-red-200/40 dark:border-red-950/50 shadow-sm cursor-pointer hover:shadow-md hover:border-red-400 dark:hover:border-red-800 transition-all group" onclick="showDraftTemplatesList()">
+                    <p class="font-bold text-[9px] text-red-700 dark:text-red-300 uppercase tracking-widest group-hover:text-red-650 dark:group-hover:text-red-400 transition-colors">Drafts</p>
+                    <p id="draft-template-count" class="text-2xl font-extrabold mt-1 text-red-900 dark:text-red-100">0</p>
+                </div>
+            </div>
+
+            <!-- Template Categories Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md" id="template-categories-grid">
+                <!-- Card 1: Technical Issues -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterTemplatesByCategory('Technical Issues')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#E0F2F1] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">settings</span>
+                        </div>
+                        <span id="template-count-technical" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Templates</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Technical Issues</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Deploy templates for crashes, installation problems, performance lags, and settings.</p>
+                </div>
+                <!-- Card 2: Account & Security -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterTemplatesByCategory('Account & Security')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-secondary-container dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">security</span>
+                        </div>
+                        <span id="template-count-account" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Templates</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Account &amp; Security</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Templates for password recovery, 2FA setup, compromised accounts, and regional transfers.</p>
+                </div>
+                <!-- Card 3: Billing & Purchases -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterTemplatesByCategory('Billing & Purchases')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-primary-fixed dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">payments</span>
+                        </div>
+                        <span id="template-count-billing" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Templates</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Billing &amp; Purchases</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Solutions for missing cores/points, transaction double charges, and purchase refunds.</p>
+                </div>
+                <!-- Card 4: Connection & Network -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterTemplatesByCategory('Connection & Network')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#E8F0FE] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">wifi</span>
+                        </div>
+                        <span id="template-count-network" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Templates</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Connection &amp; Network</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Optimizations for high ping, packet loss troubleshooting, and client downloads.</p>
+                </div>
+                <!-- Card 5: Report a Player -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterTemplatesByCategory('Report a Player')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-error-container dark:bg-[#1f2d3a] flex items-center justify-center text-error dark:text-[#b4c5ff] group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">flag</span>
+                        </div>
+                        <span id="template-count-report" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Templates</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Report a Player</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Replies for toxic behavior reports, anti-cheat bans, and safety audits.</p>
+                </div>
+                <!-- Card 6: Bug Report -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterTemplatesByCategory('Bug Report')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#FCE8E6] dark:bg-[#1f2d3a] flex items-center justify-center text-error dark:text-[#b4c5ff] group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-error dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">bug_report</span>
+                        </div>
+                        <span id="template-count-bug" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Templates</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Bug Report</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Follow-ups for gameplay exploits, ability clipping, and collision bug reports.</p>
+                </div>
+            </div>
+
+            <!-- Search Results Container -->
+            <div class="hidden space-y-md" id="template-search-results-container">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Search Results</h3>
+                    <button onclick="clearTemplateSearch()" class="text-xs text-primary dark:text-[#b4c5ff] hover:underline font-semibold">Clear Search</button>
+                </div>
+                <div id="template-search-results-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+                    <!-- Dynamic search results cards go here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Response Templates List Modal -->
+    <div id="template-list-modal" class="fixed inset-0 z-50 flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden animate-in fade-in duration-200">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col p-lg animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <h3 id="template-list-modal-title" class="font-headline font-extrabold text-xl text-on-surface dark:text-[#f0f4f8] uppercase">Category Templates</h3>
+                <button class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors p-1" onclick="closeTemplateListModal()">close</button>
+            </div>
+            <div class="flex-grow overflow-y-auto space-y-3 pr-1" id="template-list-modal-content">
+                <!-- Dynamic list items populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Detail Modal -->
+    <div id="template-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col p-lg">
+            <div class="flex justify-between items-start border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <div>
+                    <span id="modal-template-category" class="px-2 py-0.5 bg-surface-container dark:bg-[#1c2a36] text-[10px] font-bold rounded border dark:border-[#344859]/30 text-primary dark:text-[#b4c5ff] uppercase">Category</span>
+                </div>
+                <button class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors p-1" onclick="handleTemplateCloseBtnClick()">close</button>
+            </div>
+            
+            <!-- VIEW MODE CONTAINER -->
+            <div id="modal-template-view-mode" class="flex-grow flex flex-col min-h-[250px]">
+                <h2 id="modal-template-title" class="font-headline font-extrabold text-xl text-on-surface dark:text-[#f0f4f8] mt-xs uppercase">Template Title</h2>
+                <p class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mt-base mb-md border-b pb-sm border-outline-variant/30">Canned Reply Template</p>
+                <div id="modal-template-content" class="text-xs leading-relaxed text-on-surface-variant dark:text-[#a0b2c1] flex-grow overflow-y-auto whitespace-pre-wrap">
+                    Template content goes here...
+                </div>
+            </div>
+
+            <!-- EDIT MODE CONTAINER -->
+            <div id="modal-template-edit-mode" class="hidden flex flex-col gap-sm flex-grow min-h-[300px]">
+                <div class="space-y-xs">
+                    <label class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider block">Template Title</label>
+                    <input id="modal-template-title-input" class="w-full bg-white dark:bg-[#0d161d] border border-outline-variant dark:border-[#344859] rounded-lg px-sm py-2 text-xs focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface dark:text-[#f0f4f8] font-bold focus:outline-none" type="text">
+                </div>
+                <div class="space-y-xs">
+                    <label class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider block">Issue Category</label>
+                    <select id="modal-template-category-input" class="w-full bg-white dark:bg-[#0d161d] border border-outline-variant dark:border-[#344859] rounded-lg px-sm py-2 text-xs focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface dark:text-[#f0f4f8] focus:outline-none">
+                        <option value="Technical Issues">Technical Issues</option>
+                        <option value="Connection & Network">Connection & Network</option>
+                        <option value="Account & Security">Account & Security</option>
+                        <option value="Billing & Purchases">Billing & Purchases</option>
+                        <option value="Bug Report">Bug Report</option>
+                        <option value="Report a Player">Report a Player</option>
+                    </select>
+                </div>
+                <div class="space-y-xs flex-grow flex flex-col mt-xs">
+                    <label class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider block">Template Content</label>
+                    <textarea id="modal-template-content-input" class="w-full h-64 p-sm border border-outline-variant dark:border-[#344859] rounded-lg text-xs bg-white dark:bg-[#0d161d] text-on-surface dark:text-[#f0f4f8] focus:ring-1 focus:ring-primary outline-none transition-all resize-none flex-grow focus:outline-none"></textarea>
+                </div>
+            </div>
+
+            <!-- SELECT TICKET MODE CONTAINER -->
+            <div id="modal-template-select-ticket-mode" class="hidden flex flex-col gap-sm flex-grow min-h-[300px]">
+                <div class="space-y-xs">
+                    <h3 class="font-headline font-bold text-sm text-on-surface dark:text-[#f0f4f8] uppercase tracking-wider">Select Active Ticket</h3>
+                    <p class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1]">Choose an open or In Progress ticket to apply this response template to:</p>
+                </div>
+                <div id="modal-template-ticket-list" class="space-y-xs overflow-y-auto flex-grow max-h-[350px] pr-xs mt-xs">
+                    <!-- Loaded dynamically by JS -->
+                </div>
+            </div>
+
+            <div class="border-t border-outline-variant dark:border-[#344859] pt-md mt-md flex justify-end gap-sm items-center">
+                <span id="modal-template-status" class="text-[9px] px-2 py-0.5 rounded font-bold uppercase mr-sm flex items-center bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300">PUBLISHED</span>
+                <button id="modal-template-copy-btn" class="h-9 px-md bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap mr-auto" onclick="copyTemplateToClipboard()">
+                    <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                    Copy Content
+                </button>
+                <button id="modal-template-publish-btn" class="h-9 px-md bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap hidden" onclick="publishTemplate()">Publish</button>
+                <button id="modal-template-delete-btn" class="h-9 px-md bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="deleteTemplateFromModal()">Delete</button>
+                <button id="modal-template-back-btn" class="h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap hidden" onclick="cancelApplyTemplateFlow()">Back</button>
+                <button id="modal-template-edit-btn" class="h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="toggleTemplateEdit()">Edit</button>
+                <button id="modal-template-use-btn" class="h-9 px-md bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="startApplyTemplateFlow()">
+                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                    Use Template
+                </button>
+                <button id="modal-template-close-btn" class="hidden h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="handleTemplateCloseBtnClick()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overwrite Draft Confirmation Modal -->
+    <div id="confirm-overwrite-draft-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden animate-in fade-in duration-200">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col p-lg animate-in zoom-in duration-200">
+            <div class="flex justify-between items-center border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <h3 class="font-headline font-extrabold text-lg text-on-surface dark:text-[#f0f4f8] uppercase flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-amber-500">warning</span>
+                    Draft Conflict
+                </h3>
+            </div>
+            <div class="py-md text-xs text-on-surface-variant dark:text-[#a0b2c1] leading-relaxed">
+                You have an existing draft for this ticket. Do you want to keep it or overwrite it with the new template?
+            </div>
+            <div class="border-t border-outline-variant dark:border-[#344859] pt-md mt-md flex justify-end gap-sm">
+                <button class="px-md py-2 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors" id="btn-keep-draft">Keep Draft</button>
+                <button class="px-md py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm" id="btn-overwrite-draft">Overwrite</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-wrapper"></div>
+
+    <script>
+        const user = checkAuth();
+        document.getElementById('nav-container').innerHTML = getNavHTML('templates');
+        document.getElementById('toast-wrapper').innerHTML = getToastHTML();
+        initUserUI();
+
+        const DB = window.DB;
+        let activeTemplateCategoryFilter = null;
+        let templateListModalType = null;
+        let templateListModalVal = null;
+        let activeTemplateObj = null;
+        let isEditingTemplate = false;
+        let isSelectingTicketForTemplate = false;
+        let overwriteCallback = null;
+
+        DB_Helper.init().then(() => {
+            return Promise.all([
+                DB_Helper.syncTickets(DB),
+                DB_Helper.syncTemplates(DB)
+            ]);
+        }).then(() => {
+            renderTemplates();
+            updateCounts();
+        }).catch(err => {
+            console.error(err);
+            showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+        });
+
+        function updateCounts() {
+            const total = DB.templates.length;
+            const drafts = DB.templates.filter(t => t.status === 'DRAFT').length;
+            document.getElementById('total-template-count').textContent = total;
+            document.getElementById('draft-template-count').textContent = drafts;
+            
+            // update open badges
+            const badge = document.getElementById('open-ticket-count-badge');
+            const openCount = DB.tickets.filter(t => t.status === 'Open').length;
+            if (badge) {
+                badge.textContent = openCount;
+                badge.classList.toggle('hidden', openCount === 0);
+            }
+        }
+
+        function renderTemplates() {
+            updateTemplateCategoryCounts();
+            applyTemplateFilters();
+        }
+
+        function updateTemplateCategoryCounts() {
+            const categories = [
+                { name: 'Technical Issues', id: 'template-count-technical' },
+                { name: 'Account & Security', id: 'template-count-account' },
+                { name: 'Billing & Purchases', id: 'template-count-billing' },
+                { name: 'Connection & Network', id: 'template-count-network' },
+                { name: 'Report a Player', id: 'template-count-report' },
+                { name: 'Bug Report', id: 'template-count-bug' }
+            ];
+            
+            categories.forEach(cat => {
+                const count = DB.templates.filter(t => t.category === cat.name && (t.status || 'PUBLISHED') === 'PUBLISHED').length;
+                const el = document.getElementById(cat.id);
+                if (el) {
+                    el.textContent = `${count} Template${count !== 1 ? 's' : ''}`;
+                }
+            });
+        }
+
+        function filterTemplatesByCategory(category) {
+            activeTemplateCategoryFilter = category;
+            templateListModalType = 'category';
+            templateListModalVal = category;
+            refreshTemplateListModal();
+            showToast(`Opening templates for: ${category}`);
+        }
+
+        function showDraftTemplatesList() {
+            templateListModalType = 'drafts';
+            templateListModalVal = null;
+            refreshTemplateListModal();
+            showToast("Opening drafts list");
+        }
+
+        function refreshTemplateListModal() {
+            if (templateListModalType === 'category') {
+                const filtered = DB.templates.filter(tpl => tpl.category === templateListModalVal && (tpl.status || 'PUBLISHED') === 'PUBLISHED');
+                openTemplateListModal(`Templates in: ${templateListModalVal}`, filtered);
+            } else if (templateListModalType === 'drafts') {
+                const drafts = DB.templates.filter(tpl => tpl.status === 'DRAFT');
+                openTemplateListModal("Draft Response Templates", drafts);
+            }
+        }
+
+        function openTemplateListModal(title, templates) {
+            const modal = document.getElementById('template-list-modal');
+            const titleEl = document.getElementById('template-list-modal-title');
+            const contentEl = document.getElementById('template-list-modal-content');
+            
+            if (!modal || !titleEl || !contentEl) return;
+            
+            titleEl.textContent = title;
+            contentEl.innerHTML = '';
+            
+            if (templates.length === 0) {
+                contentEl.innerHTML = `<p class="text-xs text-on-surface-variant dark:text-[#a0b2c1] italic p-6 text-center">No templates available.</p>`;
+            } else {
+                templates.forEach(tpl => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between py-xs border-b border-surface-container dark:border-[#344859]/30 last:border-none hover:bg-surface-container-low dark:hover:bg-[#18242e] transition-colors p-2.5 rounded group";
+                    
+                    const snippet = tpl.content.substring(0, 75) + (tpl.content.length > 75 ? '...' : '');
+                    const badgeClass = (tpl.status || 'PUBLISHED') === 'DRAFT' ? 'bg-error-container text-on-error-container border border-red-200/50' : 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300';
+                    const statusVal = tpl.status || 'PUBLISHED';
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center gap-md overflow-hidden cursor-pointer flex-grow mr-md" onclick="showTemplateModal('${tpl.id}')">
+                            <span class="material-symbols-outlined text-on-surface-variant dark:text-[#a0b2c1] group-hover:text-primary dark:group-hover:text-[#b4c5ff] transition-colors shrink-0">mail</span>
+                            <div class="truncate">
+                                <p class="text-xs font-bold text-on-surface dark:text-[#f0f4f8] group-hover:text-primary dark:group-hover:text-[#b4c5ff] transition-colors truncate">${tpl.name}</p>
+                                <p class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mt-0.5 truncate">${snippet}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-sm shrink-0">
+                            <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase ${badgeClass}">${statusVal}</span>
+                            <button class="text-on-surface-variant hover:text-error dark:text-[#a0b2c1] dark:hover:text-red-400 p-1 rounded transition-colors focus:outline-none" onclick="deleteTemplate('${tpl.id}', event)" title="Delete Template">
+                                <span class="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                        </div>
+                    `;
+                    contentEl.appendChild(div);
+                });
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeTemplateListModal() {
+            const modal = document.getElementById('template-list-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            activeTemplateCategoryFilter = null;
+            templateListModalType = null;
+            templateListModalVal = null;
+        }
+
+        function applyTemplateFilters() {
+            const searchVal = document.getElementById('template-search-input').value.toLowerCase().trim();
+            const grid = document.getElementById('template-categories-grid');
+            const stats = document.getElementById('template-stats-dashboard');
+            const resultsContainer = document.getElementById('template-search-results-container');
+            
+            if (!searchVal) {
+                if (grid) grid.classList.remove('hidden');
+                if (stats) stats.classList.remove('hidden');
+                if (resultsContainer) resultsContainer.classList.add('hidden');
+                refreshTemplateListModal();
+                return;
+            }
+            
+            if (grid) grid.classList.add('hidden');
+            if (stats) stats.classList.add('hidden');
+            if (resultsContainer) resultsContainer.classList.remove('hidden');
+            
+            const resultsList = document.getElementById('template-search-results-list');
+            if (!resultsList) return;
+            resultsList.innerHTML = '';
+            
+            const filtered = DB.templates.filter(tpl => {
+                return tpl.name.toLowerCase().includes(searchVal) || 
+                       tpl.content.toLowerCase().includes(searchVal) ||
+                       tpl.category.toLowerCase().includes(searchVal);
+            });
+            
+            if (filtered.length === 0) {
+                resultsList.innerHTML = `
+                    <div class="col-span-full text-center py-8 text-xs text-on-surface-variant dark:text-[#a0b2c1] italic">
+                        No response templates found matching "${document.getElementById('template-search-input').value.trim()}".
+                    </div>
+                `;
+                return;
+            }
+            
+            filtered.forEach(tpl => {
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all cursor-pointer group flex flex-col justify-between";
+                card.onclick = () => showTemplateModal(tpl.id);
+                
+                const badgeClass = (tpl.status || 'PUBLISHED') === 'DRAFT' ? "bg-error-container text-on-error-container border border-red-200/50" : "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300";
+                const statusVal = tpl.status || 'PUBLISHED';
+                const author = tpl.author || "Agent G-24";
+                const edited = tpl.edited || "Recently";
+                
+                const cleanContent = tpl.content.replace(/\s+/g, ' ').trim();
+                const snippet = cleanContent.length > 120 ? cleanContent.substring(0, 120) + '...' : cleanContent;
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-sm">
+                            <span class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">${tpl.category}</span>
+                            <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase ${badgeClass}">${statusVal}</span>
+                        </div>
+                        <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8] group-hover:text-primary dark:group-hover:text-[#b4c5ff] transition-colors">${tpl.name}</h3>
+                        <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-2 leading-relaxed">${snippet}</p>
+                    </div>
+                    <div class="flex justify-between items-center text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mt-md pt-sm border-t border-surface-container dark:border-[#344859]/30">
+                        <span>Edited by ${author} • ${edited}</span>
+                        <button class="text-on-surface-variant hover:text-error dark:text-[#a0b2c1] dark:hover:text-red-400 p-1 rounded transition-colors focus:outline-none" onclick="deleteTemplate('${tpl.id}', event)" title="Delete Template">
+                            <span class="material-symbols-outlined text-[14px]">delete</span>
+                        </button>
+                    </div>
+                `;
+                resultsList.appendChild(card);
+            });
+        }
+
+        function clearTemplateSearch() {
+            const input = document.getElementById('template-search-input');
+            if (input) {
+                input.value = '';
+                applyTemplateFilters();
+            }
+        }
+
+        function showTemplateModal(id) {
+            const tpl = DB.templates.find(t => t.id === id);
+            if (!tpl) return;
+            
+            activeTemplateObj = tpl;
+            isEditingTemplate = false;
+            isSelectingTicketForTemplate = false;
+            
+            document.getElementById('modal-template-category').textContent = tpl.category;
+            document.getElementById('modal-template-title').textContent = tpl.name;
+            document.getElementById('modal-template-content').textContent = tpl.content;
+            
+            document.getElementById('modal-template-view-mode').classList.remove('hidden');
+            document.getElementById('modal-template-edit-mode').classList.add('hidden');
+            document.getElementById('modal-template-select-ticket-mode').classList.add('hidden');
+            
+            document.getElementById('modal-template-copy-btn').classList.remove('hidden');
+            document.getElementById('modal-template-edit-btn').classList.remove('hidden');
+            document.getElementById('modal-template-back-btn').classList.add('hidden');
+            
+            const publishBtn = document.getElementById('modal-template-publish-btn');
+            const useBtn = document.getElementById('modal-template-use-btn');
+            const deleteBtn = document.getElementById('modal-template-delete-btn');
+            const statusEl = document.getElementById('modal-template-status');
+            const statusVal = tpl.status || 'PUBLISHED';
+            
+            if (statusEl) {
+                statusEl.textContent = statusVal;
+                statusEl.className = `text-[9px] px-2 py-0.5 rounded font-bold uppercase mr-sm flex items-center ${
+                    statusVal === 'PUBLISHED' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300' : 'bg-error-container text-on-error-container border border-red-200/50'
+                }`;
+            }
+            
+            if (deleteBtn) deleteBtn.classList.remove('hidden');
+            
+            if (statusVal === 'DRAFT') {
+                if (publishBtn) publishBtn.classList.remove('hidden');
+                if (useBtn) useBtn.classList.add('hidden');
+            } else {
+                if (publishBtn) publishBtn.classList.add('hidden');
+                if (useBtn) useBtn.classList.remove('hidden');
+            }
+            
+            const editBtn = document.getElementById('modal-template-edit-btn');
+            editBtn.textContent = 'Edit';
+            editBtn.className = "h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap";
+            
+            const closeBtn = document.getElementById('modal-template-close-btn');
+            closeBtn.className = "hidden";
+            
+            document.getElementById('template-detail-modal').classList.remove('hidden');
+        }
+
+        function toggleTemplateEdit() {
+            if (!activeTemplateObj) return;
+            
+            const editBtn = document.getElementById('modal-template-edit-btn');
+            const closeBtn = document.getElementById('modal-template-close-btn');
+            const copyBtn = document.getElementById('modal-template-copy-btn');
+            const useBtn = document.getElementById('modal-template-use-btn');
+            const backBtn = document.getElementById('modal-template-back-btn');
+            
+            if (!isEditingTemplate) {
+                isEditingTemplate = true;
+                
+                document.getElementById('modal-template-title-input').value = activeTemplateObj.name;
+                document.getElementById('modal-template-category-input').value = activeTemplateObj.category;
+                document.getElementById('modal-template-content-input').value = activeTemplateObj.content;
+                
+                document.getElementById('modal-template-view-mode').classList.add('hidden');
+                document.getElementById('modal-template-edit-mode').classList.remove('hidden');
+                document.getElementById('modal-template-select-ticket-mode').classList.add('hidden');
+                
+                copyBtn.classList.add('hidden');
+                useBtn.classList.add('hidden');
+                backBtn.classList.add('hidden');
+                document.getElementById('modal-template-publish-btn').classList.add('hidden');
+                document.getElementById('modal-template-delete-btn').classList.add('hidden');
+                
+                editBtn.textContent = 'Save';
+                editBtn.className = "h-9 px-md bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap";
+                
+                closeBtn.textContent = 'Cancel';
+                closeBtn.className = "h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap";
+            } else {
+                const newTitle = document.getElementById('modal-template-title-input').value.trim();
+                const newCategory = document.getElementById('modal-template-category-input').value;
+                const newContent = document.getElementById('modal-template-content-input').value.trim();
+                
+                if (!newTitle || !newContent) {
+                    showToast('Title and content cannot be empty.', 'error');
+                    return;
+                }
+                
+                DB_Helper.updateTemplate(activeTemplateObj.id, newTitle, newCategory, newContent, activeTemplateObj.status === 'PUBLISHED')
+                    .then(() => DB_Helper.syncTemplates(DB))
+                    .then(() => {
+                        renderTemplates();
+                        updateCounts();
+                        showTemplateModal(activeTemplateObj.id);
+                        showToast('Response template updated successfully.');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Lỗi cập nhật: ' + err.message, 'error');
+                    });
+            }
+        }
+
+        function publishTemplate() {
+            if (!activeTemplateObj) return;
+            
+            DB_Helper.updateTemplate(activeTemplateObj.id, activeTemplateObj.name, activeTemplateObj.category, activeTemplateObj.content, true)
+                .then(() => DB_Helper.syncTemplates(DB))
+                .then(() => {
+                    showToast(`Template "${activeTemplateObj.name}" published successfully.`);
+                    showTemplateModal(activeTemplateObj.id);
+                    updateCounts();
+                    renderTemplates();
+                    refreshTemplateListModal();
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Lỗi xuất bản: ' + err.message, 'error');
+                });
+        }
+
+        function deleteTemplate(id, event) {
+            if (event) event.stopPropagation();
+            
+            const tpl = DB.templates.find(t => t.id === id);
+            if (!tpl) return;
+            
+            const confirmed = confirm(`Are you sure you want to delete the response template "${tpl.name}"?`);
+            if (confirmed) {
+                DB_Helper.deleteTemplate(id)
+                    .then(() => DB_Helper.syncTemplates(DB))
+                    .then(() => {
+                        if (activeTemplateObj && activeTemplateObj.id === id) {
+                            document.getElementById('template-detail-modal').classList.add('hidden');
+                            activeTemplateObj = null;
+                        }
+                        showToast('Response template deleted successfully.');
+                        updateCounts();
+                        renderTemplates();
+                        refreshTemplateListModal();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Lỗi xóa template: ' + err.message, 'error');
+                    });
+            }
+        }
+        
+        function deleteTemplateFromModal() {
+            if (!activeTemplateObj) return;
+            deleteTemplate(activeTemplateObj.id);
+        }
+
+        function handleTemplateCloseBtnClick() {
+            if (isEditingTemplate) {
+                isEditingTemplate = false;
+                showTemplateModal(activeTemplateObj.id);
+            } else if (isSelectingTicketForTemplate) {
+                cancelApplyTemplateFlow();
+            } else {
+                document.getElementById('template-detail-modal').classList.add('hidden');
+            }
+        }
+
+        function startApplyTemplateFlow() {
+            if (!activeTemplateObj) return;
+            isSelectingTicketForTemplate = true;
+            
+            document.getElementById('modal-template-view-mode').classList.add('hidden');
+            document.getElementById('modal-template-edit-mode').classList.add('hidden');
+            document.getElementById('modal-template-select-ticket-mode').classList.remove('hidden');
+            
+            document.getElementById('modal-template-copy-btn').classList.add('hidden');
+            document.getElementById('modal-template-edit-btn').classList.add('hidden');
+            document.getElementById('modal-template-use-btn').classList.add('hidden');
+            document.getElementById('modal-template-back-btn').classList.remove('hidden');
+            
+            renderTemplateTicketList();
+        }
+
+        function cancelApplyTemplateFlow() {
+            isSelectingTicketForTemplate = false;
+            showTemplateModal(activeTemplateObj.id);
+        }
+
+        function renderTemplateTicketList() {
+            const listContainer = document.getElementById('modal-template-ticket-list');
+            if (!listContainer) return;
+            
+            listContainer.innerHTML = '';
+            
+            const eligibleTickets = DB.tickets.filter(t => t.status === 'Open' || t.status === 'Drafting');
+            
+            if (eligibleTickets.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-8 text-xs text-on-surface-variant dark:text-[#a0b2c1] italic">
+                        No active (Open or In Progress) tickets found.
+                    </div>
+                `;
+                return;
+            }
+            
+            eligibleTickets.forEach(t => {
+                const item = document.createElement('div');
+                item.className = "p-sm bg-white dark:bg-[#18242e] border border-outline-variant dark:border-[#344859] hover:border-primary dark:hover:border-[#b4c5ff] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] rounded-xl cursor-pointer transition-all flex items-center justify-between gap-md mb-2";
+                item.onclick = () => applyTemplateToTicket(t.id);
+                
+                let badgeClass = "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-300";
+                if (t.status === 'Drafting') badgeClass = "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
+                
+                item.innerHTML = `
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-xs mb-base">
+                            <span class="text-xs font-bold text-primary dark:text-[#b4c5ff]">${t.id}</span>
+                            <span class="text-[9px] text-on-surface-variant dark:text-[#a0b2c1]">${t.game}</span>
+                        </div>
+                        <p class="text-xs font-bold text-on-surface dark:text-[#f0f4f8] truncate">${t.customer}</p>
+                        <p class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] truncate italic mt-0.5">${t.category}</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-bold uppercase shrink-0 ${badgeClass}">${t.status === 'Drafting' ? 'In Progress' : t.status}</span>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function applyTemplateToTicket(ticketId) {
+            if (!activeTemplateObj) return;
+            
+            const drafts = JSON.parse(localStorage.getItem('ticketDrafts') || '{}');
+            const draftContent = drafts[ticketId];
+            
+            if (draftContent && draftContent.trim()) {
+                const modal = document.getElementById('confirm-overwrite-draft-modal');
+                modal.classList.remove('hidden');
+                
+                document.getElementById('btn-keep-draft').onclick = () => {
+                    modal.classList.add('hidden');
+                    localStorage.setItem('activeTicketId', ticketId);
+                    window.location.href = 'ticket_detail.html';
+                };
+                
+                document.getElementById('btn-overwrite-draft').onclick = () => {
+                    modal.classList.add('hidden');
+                    drafts[ticketId] = activeTemplateObj.content;
+                    localStorage.setItem('ticketDrafts', JSON.stringify(drafts));
+                    
+                    // Cập nhật status thành Drafting lên Supabase
+                    const t = DB.tickets.find(tick => tick.id === ticketId);
+                    if (t && t.status !== 'Resolved') {
+                        t.status = 'Drafting';
+                    }
+                    localStorage.setItem('activeTicketId', ticketId);
+                    window.location.href = 'ticket_detail.html';
+                };
+                return;
+            }
+            
+            drafts[ticketId] = activeTemplateObj.content;
+            localStorage.setItem('ticketDrafts', JSON.stringify(drafts));
+            localStorage.setItem('activeTicketId', ticketId);
+            window.location.href = 'ticket_detail.html';
+        }
+
+        function copyTemplateToClipboard() {
+            if (!activeTemplateObj) return;
+            const textToCopy = activeTemplateObj.content;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        showToast('Template content copied to clipboard.');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        fallbackCopyTemplateText(textToCopy);
+                    });
+            } else {
+                fallbackCopyTemplateText(textToCopy);
+            }
+        }
+
+        function fallbackCopyTemplateText(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast('Template content copied to clipboard.');
+                } else {
+                    showToast('Failed to copy template content.');
+                }
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+                showToast('Failed to copy template content.');
+            }
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Create Response Template // Agent Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: {
+                    "error": "#ba1a1a", "error-container": "#ffdad6", "on-error-container": "#93000a",
+                    "primary-container": "#2563eb", "background": "#f6faff", "on-background": "#141d23",
+                    "on-primary": "#ffffff", "on-surface": "#141d23", "outline-variant": "#bcc9ce",
+                    "secondary-container": "#dee0e4", "on-secondary-container": "#606366",
+                    "primary": "#004ac6", "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#3d494d", "surface-container": "#e6eff8",
+                    "surface-container-high": "#e0e9f2", "surface-container-low": "#ecf5fe",
+                    "surface": "#f6faff", "inverse-surface": "#293138", "inverse-on-surface": "#e9f2fb",
+                    dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
+                        "surface-container-high": "#1f2d3a", "surface-container-low": "#0d161d",
+                        "on-surface": "#f0f4f8", "on-surface-variant": "#a0b2c1",
+                        "outline-variant": "#344859" }
+                },
+                spacing: { "xl":"48px","sm":"16px","base":"4px","md":"24px","gutter":"24px","xs":"8px","container-max":"1440px","lg":"32px" },
+                fontFamily: { "sans": ["Inter","sans-serif"], "headline": ["Inter","sans-serif"] }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
+    </style>
+    <script src="supabase-helper.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8]">
+
+    <div id="nav-container"></div>
+
+    <div class="pt-[64px] overflow-y-auto h-screen">
+        <main class="p-lg max-w-container-max mx-auto space-y-lg">
+            <!-- Back Navigation -->
+            <div>
+                <a class="inline-flex items-center gap-1 text-primary dark:text-[#b4c5ff] hover:underline text-xs font-bold transition-all" href="response_templates.html">
+                    <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                    Back to Templates
+                </a>
+            </div>
+            <!-- Page Title -->
+            <header class="mb-lg border-b border-outline-variant dark:border-[#344859] pb-md">
+                <h1 class="font-headline font-extrabold text-2xl text-on-surface dark:text-[#f0f4f8] uppercase tracking-tight">CREATE NEW RESPONSE TEMPLATE</h1>
+                <p class="text-xs text-on-surface-variant dark:text-[#a0b2c1] mt-1">Draft a standardized reply for frequent player inquiries. Variables will populate dynamically.</p>
+            </header>
+            <!-- Form Card -->
+            <div class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-xl shadow-sm p-lg">
+                <form class="space-y-md" id="addTemplateForm" onsubmit="handleNewTemplateSubmit(event)">
+                    <div>
+                        <label class="block font-bold text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mb-2 tracking-widest uppercase">TEMPLATE TITLE</label>
+                        <input id="new-template-title" class="w-full px-4 py-2 border border-outline-variant dark:border-[#344859] rounded-lg focus:ring-1 focus:ring-primary outline-none text-xs text-on-surface dark:text-[#f0f4f8] bg-white dark:bg-[#0d161d] focus:outline-none" placeholder="e.g. Connection Timeout Recovery Solution" required type="text">
+                    </div>
+                    
+                    <div>
+                        <label class="block font-bold text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mb-2 tracking-widest uppercase">ISSUE CATEGORY</label>
+                        <select id="new-template-category" class="w-full px-4 py-2 border border-outline-variant dark:border-[#344859] rounded-lg focus:ring-1 focus:ring-primary outline-none text-xs text-on-surface dark:text-[#f0f4f8] bg-white dark:bg-[#0d161d] focus:outline-none" required>
+                            <option value="" disabled selected>Select a category...</option>
+                            <option value="Technical Issues">Technical Issues</option>
+                            <option value="Connection & Network">Connection & Network</option>
+                            <option value="Account & Security">Account & Security</option>
+                            <option value="Billing & Purchases">Billing & Purchases</option>
+                            <option value="Bug Report">Bug Report</option>
+                            <option value="Report a Player">Report a Player</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block font-bold text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mb-2 tracking-widest uppercase">EMAIL REPLY BODY</label>
+                        <div class="border border-outline-variant dark:border-[#344859] rounded-lg overflow-hidden bg-white dark:bg-[#0d161d]">
+                            <!-- Simple Tool Bar -->
+                            <div class="flex items-center gap-1 p-2 bg-surface-container-low dark:bg-[#0d161d] border-b border-outline-variant dark:border-[#344859]">
+                                <button class="p-1 text-on-surface-variant dark:text-[#a0b2c1] hover:bg-surface-container dark:hover:bg-[#18242e] rounded" type="button" onclick="formatDoc('bold')"><span class="material-symbols-outlined text-[18px]">format_bold</span></button>
+                                <button class="p-1 text-on-surface-variant dark:text-[#a0b2c1] hover:bg-surface-container dark:hover:bg-[#18242e] rounded" type="button" onclick="formatDoc('italic')"><span class="material-symbols-outlined text-[18px]">format_italic</span></button>
+                                <button class="p-1 text-on-surface-variant dark:text-[#a0b2c1] hover:bg-surface-container dark:hover:bg-[#18242e] rounded" type="button" onclick="formatDoc('underline')"><span class="material-symbols-outlined text-[18px]">format_underlined</span></button>
+                                <div class="w-[1px] h-4 bg-outline-variant mx-1"></div>
+                                <button class="p-1 text-on-surface-variant dark:text-[#a0b2c1] hover:bg-surface-container dark:hover:bg-[#18242e] rounded" type="button" onclick="insertPlaceholder('[Customer Name]')"><span class="text-[10px] font-bold text-primary dark:text-[#b4c5ff] px-1">[Customer]</span></button>
+                                <button class="p-1 text-on-surface-variant dark:text-[#a0b2c1] hover:bg-surface-container dark:hover:bg-[#18242e] rounded" type="button" onclick="insertPlaceholder('[Ticket ID]')"><span class="text-[10px] font-bold text-primary dark:text-[#b4c5ff] px-1">[ID]</span></button>
+                            </div>
+                            <textarea id="new-template-content" class="w-full p-4 border-none outline-none focus:ring-0 text-xs text-on-surface dark:text-[#f0f4f8] bg-transparent focus:outline-none" placeholder="Dear [Customer Name], thank you for contacting support regarding [Ticket ID]..." rows="8" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-sm">
+                        <a href="response_templates.html" class="px-md py-2 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors inline-block align-middle leading-tight flex items-center justify-center">Cancel</a>
+                        <button class="px-md py-2 bg-surface-container-high dark:bg-[#1f2d3a] border border-outline-variant dark:border-[#344859] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors shadow-sm" type="button" onclick="saveTemplateAsDraft()">Save as Draft</button>
+                        <button class="px-md py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm" type="submit">Publish Template</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast-wrapper"></div>
+
+    <script>
+        const user = checkAuth();
+        document.getElementById('nav-container').innerHTML = getNavHTML('templates');
+        document.getElementById('toast-wrapper').innerHTML = getToastHTML();
+        initUserUI();
+
+        const DB = window.DB;
+        
+        DB_Helper.init().then(() => {
+            return Promise.all([
+                DB_Helper.syncTickets(DB),
+                DB_Helper.syncTemplates(DB)
+            ]);
+        }).then(() => {
+            updateOpenBadge();
+        }).catch(err => {
+            console.error(err);
+        });
+
+        function updateOpenBadge() {
+            const badge = document.getElementById('open-ticket-count-badge');
+            const openCount = DB.tickets.filter(t => t.status === 'Open').length;
+            if (badge) {
+                badge.textContent = openCount;
+                badge.classList.toggle('hidden', openCount === 0);
+            }
+        }
+
+        function handleNewTemplateSubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('new-template-title').value.trim();
+            const category = document.getElementById('new-template-category').value;
+            const content = document.getElementById('new-template-content').value.trim();
+            
+            if (!title || !category || !content) return;
+            
+            DB_Helper.createTemplate(title, category, content, true)
+                .then(() => {
+                    showToast('Response template published successfully');
+                    setTimeout(() => {
+                        window.location.href = 'response_templates.html';
+                    }, 800);
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Lỗi lưu template: ' + err.message, 'error');
+                });
+        }
+
+        function saveTemplateAsDraft() {
+            const title = document.getElementById('new-template-title').value.trim();
+            const category = document.getElementById('new-template-category').value;
+            const content = document.getElementById('new-template-content').value.trim();
+            
+            if (!title) {
+                showToast('Please enter a template title to save as draft.', 'error');
+                return;
+            }
+            
+            DB_Helper.createTemplate(title, category || 'Technical Issues', content, false)
+                .then(() => {
+                    showToast('Response template saved as draft!');
+                    setTimeout(() => {
+                        window.location.href = 'response_templates.html';
+                    }, 800);
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Lỗi lưu nháp: ' + err.message, 'error');
+                });
+        }
+
+        function formatDoc(cmd) {
+            showToast(`Formatting: ${cmd} applied (simulated)`);
+        }
+
+        function insertPlaceholder(placeholder) {
+            const textarea = document.getElementById('new-template-content');
+            const pos = textarea.selectionStart;
+            const text = textarea.value;
+            textarea.value = text.substring(0, pos) + placeholder + text.substring(textarea.selectionEnd);
+            textarea.focus();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>All Tickets // Agent Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: {
+                    "error": "#ba1a1a", "error-container": "#ffdad6", "on-error-container": "#93000a",
+                    "primary-container": "#2563eb", "background": "#f6faff", "on-background": "#141d23",
+                    "on-primary": "#ffffff", "on-surface": "#141d23", "outline-variant": "#bcc9ce",
+                    "secondary-container": "#dee0e4", "on-secondary-container": "#606366",
+                    "primary": "#004ac6", "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#3d494d", "surface-container": "#e6eff8",
+                    "surface-container-high": "#e0e9f2", "surface-container-low": "#ecf5fe",
+                    "surface": "#f6faff", "inverse-surface": "#293138", "inverse-on-surface": "#e9f2fb",
+                    dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
+                        "surface-container-high": "#1f2d3a", "surface-container-low": "#0d161d",
+                        "on-surface": "#f0f4f8", "on-surface-variant": "#a0b2c1",
+                        "outline-variant": "#344859" }
+                },
+                spacing: { "xl":"48px","sm":"16px","base":"4px","md":"24px","gutter":"24px","xs":"8px","container-max":"1440px","lg":"32px" },
+                fontFamily: { "sans": ["Inter","sans-serif"], "headline": ["Inter","sans-serif"] }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script src="supabase-helper.js?v=2"></script>
+    <script src="shared.js"></script>
+</head>
+<body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8]">
+
+    <div id="nav-container"></div>
+
+    <div class="pt-[64px] overflow-y-auto h-screen">
+        <main class="p-lg max-w-container-max mx-auto space-y-lg">
+            <!-- Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-md border-b border-outline-variant dark:border-[#344859] pb-md">
+                <div>
+                    <h1 class="font-headline font-extrabold text-2xl text-on-surface dark:text-[#f0f4f8] uppercase tracking-tight">ALL CUSTOMER TICKETS</h1>
+                    <p class="text-xs text-on-surface-variant dark:text-[#a0b2c1]">View and assign support tickets in the queue</p>
+                </div>
+            </div>
+
+            <!-- Filter Toolbar -->
+            <div class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-xl p-md shadow-sm flex flex-wrap gap-md items-center">
+                <div class="flex-1 min-w-[280px] relative">
+                    <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline" style="font-size: 20px;">search</span>
+                    <input id="ticket-search-input" class="w-full pl-[40px] pr-sm py-2 bg-transparent border border-outline-variant dark:border-[#344859] rounded-lg text-sm focus:border-primary outline-none transition-all text-on-surface dark:text-[#f0f4f8]" placeholder="Search by Ticket ID, Customer, Keyword..." type="text" oninput="currentTicketPage = 1; applyFilters()">
+                </div>
+                <div class="flex items-center gap-xs">
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">CATEGORY</label>
+                    <select id="ticket-category-filter" class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] pl-sm pr-10 py-2 rounded-lg text-xs outline-none cursor-pointer text-on-surface dark:text-[#f0f4f8]" onchange="currentTicketPage = 1; applyFilters()">
+                        <option value="All">All Categories</option>
+                        <option value="Technical Issues">Technical Issues</option>
+                        <option value="Connection &amp; Network">Connection &amp; Network</option>
+                        <option value="Account &amp; Security">Account &amp; Security</option>
+                        <option value="Billing &amp; Purchases">Billing &amp; Purchases</option>
+                        <option value="Bug Report">Bug Report</option>
+                        <option value="Report a Player">Report a Player</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-xs">
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">STATUS</label>
+                    <select id="ticket-status-filter" class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] pl-sm pr-10 py-2 rounded-lg text-xs outline-none cursor-pointer text-on-surface dark:text-[#f0f4f8]" onchange="currentTicketPage = 1; applyFilters()">
+                        <option value="All">All Status</option>
+                        <option value="Open">Open</option>
+                        <option value="Drafting">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                </div>
+                <button class="bg-primary hover:brightness-110 text-white px-md py-2 rounded-lg text-xs font-bold flex items-center gap-xs active:scale-95 transition-all shadow-sm" onclick="triggerFilterReset()">
+                    <span class="material-symbols-outlined text-[16px]">filter_list_off</span>
+                    Reset Filters
+                </button>
+            </div>
+
+            <!-- Status Guide -->
+            <div class="flex flex-wrap items-center gap-md text-[11px] text-on-surface-variant dark:text-[#a0b2c1] bg-white dark:bg-[#111a22] border border-outline-variant/40 dark:border-[#344859] rounded-xl px-md py-sm shadow-sm">
+                <span class="font-bold uppercase tracking-wider text-[9px] mr-xs flex items-center gap-0.5 text-primary dark:text-[#b4c5ff]"><span class="material-symbols-outlined text-[14px]">info</span>Status Guide:</span>
+                <div class="flex items-center gap-xs"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-error-container text-on-error-container border border-red-200">Open</span><span class="italic">New ticket awaiting agent action</span></div>
+                <div class="flex items-center gap-xs"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">In Progress</span><span class="italic">Ticket has a saved draft or is in progress</span></div>
+                <div class="flex items-center gap-xs"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-green-100 text-green-800 border border-green-200">Resolved</span><span class="italic">Issue has been solved and completed</span></div>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-xl shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-surface-container-low dark:bg-[#0d161d] border-b border-outline-variant dark:border-[#344859]">
+                            <th class="px-md py-3 text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">TICKET ID</th>
+                            <th class="px-md py-3 text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">CUSTOMER</th>
+                            <th class="px-md py-3 text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">GAME</th>
+                            <th class="px-md py-3 text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">CATEGORY</th>
+                            <th class="px-md py-3 text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">CREATED DATE</th>
+                            <th class="px-md py-3 text-[10px] font-bold text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider text-center">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticket-table-body" class="divide-y divide-surface-container dark:divide-[#1c2a36]">
+                        <tr><td colspan="6" class="px-md py-lg text-center text-xs text-on-surface-variant dark:text-[#a0b2c1]"><span class="animate-spin material-symbols-outlined text-primary dark:text-[#b4c5ff] mr-sm">progress_activity</span>Loading tickets...</td></tr>
+                    </tbody>
+                </table>
+                <div class="bg-surface-container-low dark:bg-[#0d161d] px-md py-3 flex items-center justify-between border-t border-outline-variant dark:border-[#344859]">
+                    <p id="pagination-stats" class="text-xs text-on-surface-variant dark:text-[#a0b2c1]">—</p>
+                    <div id="pagination-buttons" class="flex items-center gap-xs"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast-wrapper"></div>
+
+    <script>
+        const user = checkAuth();
+        document.getElementById('nav-container').innerHTML = getNavHTML('ticket-list');
+        document.getElementById('toast-wrapper').innerHTML = getToastHTML();
+        initUserUI();
+
+        const DB = window.DB;
+        let currentTicketPage = 1;
+
+        // Sync draft statuses from localStorage
+        function syncDraftStatuses() {
+            const drafts = JSON.parse(localStorage.getItem('ticketDrafts') || '{}');
+            DB.tickets.forEach(t => {
+                if (drafts[t.id]) { if (t.status !== 'Resolved') t.status = 'Drafting'; }
+                else { if (t.status === 'Drafting') t.status = 'Open'; }
+            });
+        }
+
+        DB_Helper.init().then(() => {
+            return DB_Helper.syncTickets(DB);
+        }).then(() => {
+            syncDraftStatuses();
+            // Apply prefilters from dashboard
+            const precat = localStorage.getItem('prefilter_category');
+            const presearch = localStorage.getItem('prefilter_search');
+            if (precat) { document.getElementById('ticket-category-filter').value = precat; localStorage.removeItem('prefilter_category'); }
+            if (presearch) { document.getElementById('ticket-search-input').value = presearch; localStorage.removeItem('prefilter_search'); }
+            applyFilters();
+            updateOpenBadge();
+        }).catch(err => { console.error(err); showToast('Lỗi tải dữ liệu: ' + err.message, 'error'); });
+
+        function updateOpenBadge() {
+            const badge = document.getElementById('open-ticket-count-badge');
+            const openCount = DB.tickets.filter(t => t.status === 'Open').length;
+            if (badge) { badge.textContent = openCount; badge.classList.toggle('hidden', openCount === 0); }
+        }
+
+        function applyFilters() {
+            syncDraftStatuses();
+            const searchVal = document.getElementById('ticket-search-input').value.toLowerCase();
+            const catVal    = document.getElementById('ticket-category-filter').value;
+            const statVal   = document.getElementById('ticket-status-filter').value;
+            const tbody     = document.getElementById('ticket-table-body');
+            tbody.innerHTML = '';
+
+            const filtered = DB.tickets.filter(t => {
+                const matchesSearch = t.id.toLowerCase().includes(searchVal) || t.customer.toLowerCase().includes(searchVal) || t.description.toLowerCase().includes(searchVal);
+                const matchesCat  = catVal === 'All' || t.category === catVal;
+                const matchesStat = statVal === 'All' || t.status === statVal;
+                return matchesSearch && matchesCat && matchesStat;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-md py-lg text-center text-xs text-on-surface-variant dark:text-[#a0b2c1] italic">No tickets matching current filters.</td></tr>`;
+                document.getElementById('pagination-stats').textContent = 'Showing 0 to 0 of 0 tickets';
+                document.getElementById('pagination-buttons').innerHTML = '';
+                return;
+            }
+
+            const itemsPerPage = 10;
+            const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+            if (currentTicketPage > totalPages) currentTicketPage = totalPages;
+            const startIdx = (currentTicketPage - 1) * itemsPerPage;
+            const endIdx   = Math.min(startIdx + itemsPerPage, filtered.length);
+            const pageItems = filtered.slice(startIdx, endIdx);
+
+            pageItems.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-surface-container-low dark:hover:bg-[#18242e] transition-colors cursor-pointer group';
+                tr.onclick = () => {
+                    localStorage.setItem('activeTicketId', t.id);
+                    window.location.href = 'ticket_detail.html';
+                };
+                let statusClass = 'bg-error-container text-on-error-container';
+                if (t.status === 'Drafting') statusClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300';
+                if (t.status === 'Resolved') statusClass = 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300';
+                const avatarCell = t.avatar
+                    ? `<img src="${t.avatar}" class="w-6 h-6 rounded-full border" alt="Avatar">`
+                    : `<div class="w-6 h-6 rounded-full bg-secondary-container dark:bg-[#1f2d3a] flex items-center justify-center text-[10px] font-bold text-on-secondary-container dark:text-[#a0b2c1]">${t.customerInitials || '?'}</div>`;
+                tr.innerHTML = `
+                    <td class="px-md py-3 font-bold text-xs text-primary dark:text-[#b4c5ff]">${t.id.startsWith('#') ? t.id : '#' + t.id}</td>
+                    <td class="px-md py-3"><div class="flex items-center gap-xs">${avatarCell}<span class="text-xs text-on-surface dark:text-[#f0f4f8] font-medium">${t.customer}</span></div></td>
+                    <td class="px-md py-3 text-xs text-on-surface dark:text-[#f0f4f8]">${t.game}</td>
+                    <td class="px-md py-3"><span class="px-xs py-0.5 bg-surface-container dark:bg-[#1c2a36] text-[10px] font-bold rounded border dark:border-[#344859]/30">${t.category}</span></td>
+                    <td class="px-md py-3 text-xs text-on-surface-variant dark:text-[#a0b2c1]">${t.date}</td>
+                    <td class="px-md py-3 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${statusClass}">${t.status === 'Drafting' ? 'In Progress' : t.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('pagination-stats').textContent = `Showing ${startIdx + 1} to ${endIdx} of ${filtered.length} tickets`;
+            const pButtons = document.getElementById('pagination-buttons');
+            if (pButtons) {
+                pButtons.innerHTML = '';
+                const mkBtn = (content, onclick, disabled, active = false) => {
+                    const b = document.createElement('button');
+                    b.className = `w-8 h-8 flex items-center justify-center rounded ${active ? 'bg-primary text-white font-bold text-xs shadow-sm' : 'border border-outline-variant dark:border-[#344859] text-on-surface dark:text-[#f0f4f8] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] transition-colors text-xs'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+                    b.disabled = disabled; b.onclick = onclick; b.innerHTML = content;
+                    return b;
+                };
+                pButtons.appendChild(mkBtn('<span class="material-symbols-outlined text-[16px]">chevron_left</span>', () => { if(currentTicketPage>1){currentTicketPage--;applyFilters();} }, currentTicketPage===1));
+                for (let p = 1; p <= totalPages; p++) {
+                    pButtons.appendChild(mkBtn(p, () => { currentTicketPage=p; applyFilters(); }, false, p===currentTicketPage));
+                }
+                pButtons.appendChild(mkBtn('<span class="material-symbols-outlined text-[16px]">chevron_right</span>', () => { if(currentTicketPage<totalPages){currentTicketPage++;applyFilters();} }, currentTicketPage===totalPages));
+            }
+        }
+
+        function triggerFilterReset() {
+            document.getElementById('ticket-search-input').value = '';
+            document.getElementById('ticket-category-filter').value = 'All';
+            document.getElementById('ticket-status-filter').value = 'All';
+            currentTicketPage = 1;
+            applyFilters();
+            showToast('Filters cleared');
+        }
+    </script>
+</body>
+</html>

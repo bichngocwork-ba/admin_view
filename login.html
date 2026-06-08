@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Game Support // Agent Portal - Login</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error": "#ba1a1a", "primary-container": "#2563eb", "on-background": "#141d23",
+                        "background": "#f6faff", "on-primary": "#ffffff", "on-surface": "#141d23",
+                        "outline-variant": "#bcc9ce", "primary": "#004ac6", "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#3d494d", "surface-container": "#e6eff8",
+                        "surface-container-low": "#ecf5fe", "surface": "#f6faff",
+                        dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
+                            "on-surface": "#f0f4f8", "on-surface-variant": "#a0b2c1",
+                            "outline-variant": "#344859", outline: "#526c81" }
+                    },
+                    spacing: { "xl": "48px", "sm": "16px", "base": "4px", "md": "24px", "xs": "8px", "lg": "32px" },
+                    fontFamily: { "sans": ["Inter", "sans-serif"], "headline": ["Inter", "sans-serif"] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadein { animation: fadeInUp 0.5s ease forwards; }
+    </style>
+    <script src="supabase-helper.js"></script>
+</head>
+<body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8] min-h-screen flex flex-col items-center justify-center p-md">
+
+    <main class="w-full max-w-[480px] animate-fadein">
+        <div class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl p-xl custom-shadow">
+            <header class="mb-xl text-center">
+                <div class="flex items-center justify-center gap-xs mb-sm">
+                    <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] text-3xl" style="font-variation-settings: 'FILL' 1;">security</span>
+                </div>
+                <h1 class="font-headline font-extrabold text-2xl text-primary dark:text-[#b4c5ff] tracking-tight uppercase">
+                    GAME SUPPORT // AGENT PORTAL
+                </h1>
+                <p class="font-bold text-xs tracking-wider text-on-surface-variant dark:text-[#a0b2c1] uppercase mt-xs">
+                    SECURE LOG-IN REQUIRED
+                </p>
+            </header>
+
+            <form class="flex flex-col gap-md" id="loginForm">
+                <div class="space-y-base">
+                    <label class="font-bold text-xs text-on-surface-variant dark:text-[#a0b2c1] block uppercase" for="agentId">AGENT ID / EMAIL</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-[#a0b2c1]" style="font-size:18px;">person</span>
+                        <input class="w-full h-[48px] pl-[40px] pr-sm border border-outline-variant dark:border-[#344859] rounded-lg bg-white dark:bg-[#0d161d] text-on-surface dark:text-[#f0f4f8] focus:border-primary dark:focus:border-[#b4c5ff] focus:ring-0 focus:outline-none transition-all placeholder:text-outline-variant" id="agentId" placeholder="agent@gamesupport.com" required type="text">
+                    </div>
+                </div>
+
+                <div class="space-y-base">
+                    <label class="font-bold text-xs text-on-surface-variant dark:text-[#a0b2c1] block uppercase" for="password">PASSWORD</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-[#a0b2c1]" style="font-size:18px;">lock</span>
+                        <input class="w-full h-[48px] pl-[40px] pr-xl border border-outline-variant dark:border-[#344859] rounded-lg bg-white dark:bg-[#0d161d] text-on-surface dark:text-[#f0f4f8] focus:border-primary dark:focus:border-[#b4c5ff] focus:ring-0 focus:outline-none transition-all placeholder:text-outline-variant" id="password" placeholder="Enter password" required type="password">
+                        <button class="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors focus:outline-none" onclick="togglePassword()" type="button">
+                            <span class="material-symbols-outlined" id="eyeIcon">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="login-error-msg" class="hidden text-xs text-error font-bold text-center py-xs px-sm bg-error/10 rounded-lg border border-error/20"></div>
+
+                <button class="mt-sm w-full h-[56px] bg-primary text-white font-bold rounded-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm shadow-md" type="submit" id="login-btn">
+                    LOG IN TO WORKSPACE
+                    <span class="material-symbols-outlined">login</span>
+                </button>
+            </form>
+
+            <div class="mt-lg pt-md border-t border-outline-variant dark:border-[#344859]">
+                <p class="text-[12px] text-on-surface-variant dark:text-[#a0b2c1] text-center leading-relaxed">
+                    Authorized personnel only. All activities are logged and monitored.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-md flex justify-center gap-md">
+            <a class="font-bold text-xs text-on-surface-variant hover:text-primary dark:text-[#a0b2c1] dark:hover:text-[#b4c5ff] transition-colors" href="#">HELP DESK</a>
+            <span class="text-outline-variant dark:text-[#344859]">•</span>
+            <a class="font-bold text-xs text-on-surface-variant hover:text-primary dark:text-[#a0b2c1] dark:hover:text-[#b4c5ff] transition-colors" href="#">FORGOT CREDENTIALS</a>
+        </div>
+    </main>
+
+    <script>
+        // Redirect if already logged in
+        const existing = localStorage.getItem('currentUser');
+        if (existing) {
+            try {
+                JSON.parse(existing);
+                window.location.replace('ticket_list.html');
+            } catch(e) { localStorage.removeItem('currentUser'); }
+        }
+
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') { pwd.type = 'text'; icon.textContent = 'visibility_off'; }
+            else { pwd.type = 'password'; icon.textContent = 'visibility'; }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const agentIdVal = document.getElementById('agentId').value.trim();
+            const passwordVal = document.getElementById('password').value.trim();
+            const email = agentIdVal.includes('@') ? agentIdVal : `${agentIdVal.toLowerCase()}@gamesupport.com`;
+
+            const btn = document.getElementById('login-btn');
+            const errEl = document.getElementById('login-error-msg');
+            errEl.classList.add('hidden');
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span> AUTHORIZING...';
+            btn.disabled = true;
+
+            DB_Helper.login(email, passwordVal)
+                .then(() => {
+                    window.location.replace('ticket_list.html');
+                })
+                .catch(err => {
+                    btn.innerHTML = 'LOG IN TO WORKSPACE <span class="material-symbols-outlined">login</span>';
+                    btn.disabled = false;
+                    errEl.textContent = err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+                    errEl.classList.remove('hidden');
+                });
+        });
+    </script>
+</body>
+</html>

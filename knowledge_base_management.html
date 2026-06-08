@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Knowledge Base Management // Agent Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: {
+                    "error": "#ba1a1a", "error-container": "#ffdad6", "on-error-container": "#93000a",
+                    "primary-container": "#2563eb", "background": "#f6faff", "on-background": "#141d23",
+                    "on-primary": "#ffffff", "on-surface": "#141d23", "outline-variant": "#bcc9ce",
+                    "secondary-container": "#dee0e4", "on-secondary-container": "#606366",
+                    "primary": "#004ac6", "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#3d494d", "surface-container": "#e6eff8",
+                    "surface-container-high": "#e0e9f2", "surface-container-low": "#ecf5fe",
+                    "surface": "#f6faff", "inverse-surface": "#293138", "inverse-on-surface": "#e9f2fb",
+                    dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
+                        "surface-container-high": "#1f2d3a", "surface-container-low": "#0d161d",
+                        "on-surface": "#f0f4f8", "on-surface-variant": "#a0b2c1",
+                        "outline-variant": "#344859" }
+                },
+                spacing: { "xl":"48px","sm":"16px","base":"4px","md":"24px","gutter":"24px","xs":"8px","container-max":"1440px","lg":"32px" },
+                fontFamily: { "sans": ["Inter","sans-serif"], "headline": ["Inter","sans-serif"] }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script src="supabase-helper.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8]">
+
+    <div id="nav-container"></div>
+
+    <div class="pt-[64px] overflow-y-auto h-screen">
+        <main class="p-lg max-w-container-max mx-auto space-y-lg">
+            <!-- Page Header -->
+            <div class="flex justify-between items-end border-b border-outline-variant dark:border-[#344859] pb-md">
+                <div>
+                    <h1 class="font-headline font-extrabold text-2xl text-on-surface dark:text-[#f0f4f8] tracking-tight uppercase">KNOWLEDGE BASE MANAGEMENT</h1>
+                    <p class="text-xs text-on-surface-variant dark:text-[#a0b2c1]">Organize and maintain internal documentation for player support operations</p>
+                </div>
+                <a href="add_knowledge_base_article.html" class="bg-primary hover:brightness-110 text-white px-md py-2 rounded-lg text-xs font-bold flex items-center gap-xs hover:bg-[#003ea8] transition-all shadow-md active:scale-95">
+                    <span class="material-symbols-outlined text-[16px]">add</span>
+                    ADD ARTICLE
+                </a>
+            </div>
+
+            <!-- Search Row -->
+            <div class="flex gap-md">
+                <div class="flex-grow flex items-center bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-lg px-md py-2 shadow-sm focus-within:border-primary transition-all">
+                    <span class="material-symbols-outlined text-outline" style="font-size: 20px;">search</span>
+                    <input id="kb-search-input" class="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface dark:text-[#f0f4f8] ml-xs outline-none focus:outline-none" placeholder="Search articles by keywords..." type="text" oninput="applyKbSearch()">
+                </div>
+            </div>
+
+            <!-- Search Results Container -->
+            <div id="kb-search-results-container" class="hidden space-y-md">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Search Results</h3>
+                    <button onclick="clearKbSearch()" class="text-xs text-primary dark:text-[#b4c5ff] hover:underline font-semibold">Clear Search</button>
+                </div>
+                <div id="kb-search-results-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+                    <!-- Dynamic search results cards go here -->
+                </div>
+            </div>
+
+            <!-- Statistics Dashboard -->
+            <div id="kb-stats-dashboard" class="grid grid-cols-1 sm:grid-cols-3 gap-md">
+                <!-- Card 1: Total Articles (Blue theme) -->
+                <div class="bg-blue-50/80 dark:bg-[#0f1d2e] p-md rounded-xl border border-blue-200/40 dark:border-blue-900/40 shadow-sm transition-all hover:shadow-md">
+                    <p class="font-bold text-[9px] text-blue-700 dark:text-blue-300 uppercase tracking-widest">Total Articles</p>
+                    <p id="total-kb-articles-count" class="text-2xl font-extrabold mt-1 text-blue-900 dark:text-blue-100">0</p>
+                </div>
+                <!-- Card 2: Top Category (Purple theme) -->
+                <div class="bg-purple-50/80 dark:bg-[#1a152e] p-md rounded-xl border border-purple-200/40 dark:border-purple-900/40 shadow-sm transition-all hover:shadow-md">
+                    <p class="font-bold text-[9px] text-purple-700 dark:text-purple-300 uppercase tracking-widest">Top Category</p>
+                    <p id="top-category-name" class="text-2xl font-extrabold mt-1 text-purple-900 dark:text-purple-100">Billing</p>
+                </div>
+                <!-- Card 3: Drafts (Red theme) -->
+                <div class="bg-red-50/80 dark:bg-[#2b161b] p-md rounded-xl border border-red-200/40 dark:border-red-950/50 shadow-sm cursor-pointer hover:shadow-md hover:border-red-400 dark:hover:border-red-800 transition-all group" onclick="showDraftArticlesList()">
+                    <p class="font-bold text-[9px] text-red-700 dark:text-red-300 uppercase tracking-widest group-hover:text-red-650 dark:group-hover:text-red-400 transition-colors">Drafts</p>
+                    <p id="draft-kb-articles-count" class="text-2xl font-extrabold mt-1 text-red-900 dark:text-red-100">0</p>
+                </div>
+            </div>
+
+            <!-- Article Categories Grid -->
+            <div id="kb-categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
+                <!-- Card 1: Technical Issues -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Technical Issues')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#E0F2F1] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">settings</span>
+                        </div>
+                        <span id="kb-count-technical" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Technical Issues</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Troubleshoot crashes, performance lags, connectivity errors, and installation problems across all platforms.</p>
+                </div>
+                <!-- Card 2: Account & Security -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Account & Security')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-secondary-container dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">security</span>
+                        </div>
+                        <span id="kb-count-account" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Account &amp; Security</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Manage your profile, password recovery, two-factor authentication, and account linking settings.</p>
+                </div>
+                <!-- Card 3: Billing & Purchases -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Billing & Purchases')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-primary-fixed dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">payments</span>
+                        </div>
+                        <span id="kb-count-billing" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Billing &amp; Purchases</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Questions about payment methods, missing in-game currency, subscription management, and refund requests.</p>
+                </div>
+                <!-- Card 4: Connection & Network -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Connection & Network')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#E8F0FE] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">wifi</span>
+                        </div>
+                        <span id="kb-count-connection" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Connection &amp; Network</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Troubleshoot ping spikes, high latency, server connection failures, and Wi-Fi stability.</p>
+                </div>
+                <!-- Card 5: Report a Player -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Report a Player')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-error-container dark:bg-[#1f2d3a] flex items-center justify-center text-error dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 24px;">flag</span>
+                        </div>
+                        <span id="kb-count-report" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Report a Player</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Learn how to report toxicity, cheating, or harassment. Understand our fair play policies and ban appeals.</p>
+                </div>
+                <!-- Card 6: Bug Report -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Bug Report')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#FCE8E6] dark:bg-[#1f2d3a] flex items-center justify-center text-error dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-error dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">bug_report</span>
+                        </div>
+                        <span id="kb-count-bug" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Bug Report</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Report in-game glitches, character ability bugs, map collision exploits, and visual UI issues.</p>
+                </div>
+                <!-- Card 7: In-Game Content -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('In-Game Content')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#EADDF6] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">sports_esports</span>
+                        </div>
+                        <span id="kb-count-content" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">In-Game Content</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Guides for seasons, event schedules, item descriptions, and mechanics for all currently supported titles.</p>
+                </div>
+                <!-- Card 8: Community Support -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Community Support')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#d8e2ff] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">forum</span>
+                        </div>
+                        <span id="kb-count-community" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Community Support</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Connect with our community forums, join discord servers, and find player-driven wikis and resources.</p>
+                </div>
+                <!-- Card 9: Esports & Tournaments -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Esports & Tournaments')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#FFF9C4] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">emoji_events</span>
+                        </div>
+                        <span id="kb-count-esports" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Esports &amp; Tournaments</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Get schedules, team statistics, reward drops, ticket bookings, and tournament rules.</p>
+                </div>
+                <!-- Card 10: Merchandise Support -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Merchandise Support')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#F5F5F5] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">shopping_bag</span>
+                        </div>
+                        <span id="kb-count-merch" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Merchandise Support</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Inquire about clothing apparel sizes, order shipping status, tracking numbers, and damage refunds.</p>
+                </div>
+                <!-- Card 11: Creator Partner Program -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Creator Partner Program')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#E1BEE7] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">video_camera_front</span>
+                        </div>
+                        <span id="kb-count-creator" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Creator Partner Program</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">How to join our creator network, access early updates, custom overlays, and monetization benefits.</p>
+                </div>
+                <!-- Card 12: Localization & Language -->
+                <div class="bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all group cursor-pointer" onclick="filterKbArticlesByCategory('Localization & Language')">
+                    <div class="flex justify-between items-start mb-sm">
+                        <div class="w-10 h-10 rounded-lg bg-[#DCEDC8] dark:bg-[#1f2d3a] flex items-center justify-center text-primary dark:text-[#b4c5ff] mb-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] group-hover:text-white" style="font-size: 24px;">translate</span>
+                        </div>
+                        <span id="kb-count-language" class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">0 Articles</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8]">Localization &amp; Language</h3>
+                    <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-1 leading-relaxed">Change in-game audio dubbing, client text translation, regional settings, and server transfers.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- KB Articles List Modal -->
+    <div id="kb-list-modal" class="fixed inset-0 z-50 flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col p-lg animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <h3 id="kb-list-modal-title" class="font-headline font-extrabold text-xl text-on-surface dark:text-[#f0f4f8] uppercase">Category Articles</h3>
+                <button class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors p-1" onclick="closeKbListModal()">close</button>
+            </div>
+            <div class="flex-grow overflow-y-auto space-y-3 pr-1" id="kb-list-modal-content">
+                <!-- Dynamic list items populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Article Detail Modal -->
+    <div id="article-detail-modal" class="fixed inset-0 z-[55] flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col p-lg">
+            <div class="flex justify-between items-start border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <div>
+                    <span id="modal-article-category" class="px-2 py-0.5 bg-surface-container dark:bg-[#1c2a36] text-[10px] font-bold rounded border dark:border-[#344859]/30 text-primary dark:text-[#b4c5ff] uppercase">Category</span>
+                </div>
+                <button class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors p-1" onclick="handleKbArticleCloseBtnClick()">close</button>
+            </div>
+            
+            <!-- VIEW MODE CONTAINER -->
+            <div id="modal-article-view-mode" class="flex-grow flex flex-col min-h-[250px]">
+                <h2 id="modal-article-title" class="font-headline font-extrabold text-xl text-on-surface dark:text-[#f0f4f8] mt-xs uppercase">Article Title</h2>
+                <p id="modal-article-meta" class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mt-base mb-md border-b pb-sm border-outline-variant/30">Edited by Agent G-24 • 2h ago</p>
+                <div id="modal-article-content" class="text-xs leading-relaxed text-on-surface-variant dark:text-[#a0b2c1] flex-grow overflow-y-auto whitespace-pre-wrap">
+                    Article content goes here...
+                </div>
+            </div>
+
+            <!-- EDIT MODE CONTAINER -->
+            <div id="modal-article-edit-mode" class="hidden flex flex-col gap-sm flex-grow min-h-[300px]">
+                <div class="space-y-xs">
+                    <label class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider block">Article Title</label>
+                    <input id="modal-article-title-input" class="w-full bg-white dark:bg-[#0d161d] border border-outline-variant dark:border-[#344859] rounded-lg px-sm py-2 text-xs focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface dark:text-[#f0f4f8] font-bold focus:outline-none" type="text">
+                </div>
+                <div class="space-y-xs flex-grow flex flex-col mt-xs">
+                    <label class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider block">Article Body Content</label>
+                    <textarea id="modal-article-content-input" class="w-full h-64 p-sm border border-outline-variant dark:border-[#344859] rounded-lg text-xs bg-white dark:bg-[#0d161d] text-on-surface dark:text-[#f0f4f8] focus:ring-1 focus:ring-primary outline-none transition-all resize-none flex-grow focus:outline-none"></textarea>
+                </div>
+            </div>
+
+            <div class="border-t border-outline-variant dark:border-[#344859] pt-md mt-md flex justify-end gap-sm items-center">
+                <span id="modal-article-status" class="text-[9px] px-2 py-0.5 rounded font-bold uppercase mr-auto flex items-center bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300">PUBLISHED</span>
+                <button id="modal-article-publish-btn" class="h-9 px-md bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap hidden" onclick="publishKbArticle()">Publish</button>
+                <button id="modal-article-delete-btn" class="h-9 px-md bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="deleteKbArticleFromModal()">Delete</button>
+                <button id="modal-article-edit-btn" class="h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="toggleKbArticleEdit()">Edit</button>
+                <button id="modal-article-close-btn" class="hidden h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap" onclick="handleKbArticleCloseBtnClick()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-wrapper"></div>
+
+    <script>
+        const user = checkAuth();
+        document.getElementById('nav-container').innerHTML = getNavHTML('knowledge-base');
+        document.getElementById('toast-wrapper').innerHTML = getToastHTML();
+        initUserUI();
+
+        const DB = window.DB;
+        let activeKbCategoryFilter = null;
+        let activeKbArticle = null;
+        let isEditingKbArticle = false;
+        let kbListModalType = null;
+        let kbListModalVal = null;
+
+        DB_Helper.init().then(() => {
+            return Promise.all([
+                DB_Helper.syncTickets(DB),
+                DB_Helper.syncArticles(DB)
+            ]);
+        }).then(() => {
+            renderKnowledgeBase();
+            updateCounts();
+        }).catch(err => {
+            console.error(err);
+            showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+        });
+
+        function updateCounts() {
+            const total = DB.articles.length;
+            const drafts = DB.articles.filter(a => a.status === 'DRAFT').length;
+            document.getElementById('total-kb-articles-count').textContent = total;
+            document.getElementById('draft-kb-articles-count').textContent = drafts;
+
+            // calculate top category
+            const cats = {};
+            DB.articles.forEach(a => {
+                cats[a.category] = (cats[a.category] || 0) + 1;
+            });
+            let topCat = 'None';
+            let max = 0;
+            for (let c in cats) {
+                if (cats[c] > max) {
+                    max = cats[c];
+                    topCat = c;
+                }
+            }
+            document.getElementById('top-category-name').textContent = topCat;
+
+            // update open badges
+            const badge = document.getElementById('open-ticket-count-badge');
+            const openCount = DB.tickets.filter(t => t.status === 'Open').length;
+            if (badge) {
+                badge.textContent = openCount;
+                badge.classList.toggle('hidden', openCount === 0);
+            }
+        }
+
+        function renderKnowledgeBase() {
+            renderKbArticles();
+        }
+
+        function renderKbArticles() {
+            // Update counts in card categories
+            const cats = [
+                { name: 'Technical Issues', id: 'kb-count-technical' },
+                { name: 'Account & Security', id: 'kb-count-account' },
+                { name: 'Billing & Purchases', id: 'kb-count-billing' },
+                { name: 'Connection & Network', id: 'kb-count-connection' },
+                { name: 'Report a Player', id: 'kb-count-report' },
+                { name: 'Bug Report', id: 'kb-count-bug' },
+                { name: 'In-Game Content', id: 'kb-count-content' },
+                { name: 'Community Support', id: 'kb-count-community' },
+                { name: 'Esports & Tournaments', id: 'kb-count-esports' },
+                { name: 'Merchandise Support', id: 'kb-count-merch' },
+                { name: 'Creator Partner Program', id: 'kb-count-creator' },
+                { name: 'Localization & Language', id: 'kb-count-language' }
+            ];
+
+            cats.forEach(c => {
+                const count = DB.articles.filter(a => a.category === c.name && a.status === 'PUBLISHED').length;
+                const el = document.getElementById(c.id);
+                if (el) {
+                    el.textContent = `${count} Article${count !== 1 ? 's' : ''}`;
+                }
+            });
+
+            refreshKbListModal();
+        }
+
+        function filterKbArticlesByCategory(category) {
+            activeKbCategoryFilter = category;
+            kbListModalType = 'category';
+            kbListModalVal = category;
+            refreshKbListModal();
+            showToast(`Opening articles for: ${category}`);
+        }
+
+        function showDraftArticlesList() {
+            kbListModalType = 'drafts';
+            kbListModalVal = null;
+            refreshKbListModal();
+            showToast("Opening drafts list");
+        }
+
+        function refreshKbListModal() {
+            if (kbListModalType === 'category') {
+                const filtered = DB.articles.filter(art => art.category === kbListModalVal && art.status === 'PUBLISHED');
+                openKbListModal(`Articles in: ${kbListModalVal}`, filtered);
+            } else if (kbListModalType === 'drafts') {
+                const drafts = DB.articles.filter(art => art.status === 'DRAFT');
+                openKbListModal("Draft Articles", drafts);
+            }
+        }
+
+        function openKbListModal(title, articles) {
+            const modal = document.getElementById('kb-list-modal');
+            const titleEl = document.getElementById('kb-list-modal-title');
+            const contentEl = document.getElementById('kb-list-modal-content');
+            
+            if (!modal || !titleEl || !contentEl) return;
+            
+            titleEl.textContent = title;
+            contentEl.innerHTML = '';
+            
+            if (articles.length === 0) {
+                contentEl.innerHTML = `<p class="text-xs text-on-surface-variant dark:text-[#a0b2c1] italic p-6 text-center">No articles available.</p>`;
+            } else {
+                articles.forEach(art => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between py-xs border-b border-surface-container dark:border-[#344859]/30 last:border-none hover:bg-surface-container-low dark:hover:bg-[#18242e] transition-colors p-2.5 rounded cursor-pointer group";
+                    div.onclick = () => {
+                        showArticleModal(art);
+                    };
+                    
+                    let badgeClass = "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300";
+                    if (art.status === 'DRAFT') badgeClass = "bg-error-container text-on-error-container border border-red-200/50";
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center gap-md">
+                            <span class="material-symbols-outlined text-on-surface-variant dark:text-[#a0b2c1] group-hover:text-primary dark:group-hover:text-[#b4c5ff] transition-colors">description</span>
+                            <div>
+                                <p class="text-xs font-bold text-on-surface dark:text-[#f0f4f8] group-hover:text-primary dark:group-hover:text-[#b4c5ff] transition-colors">${art.title}</p>
+                                <p class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mt-0.5">Category: ${art.category} • Edited by ${art.author || 'Agent'}</p>
+                            </div>
+                        </div>
+                        <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase ${badgeClass}">${art.status}</span>
+                    `;
+                    contentEl.appendChild(div);
+                });
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeKbListModal() {
+            const modal = document.getElementById('kb-list-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            activeKbCategoryFilter = null;
+            kbListModalType = null;
+            kbListModalVal = null;
+        }
+
+        function applyKbSearch() {
+            const input = document.getElementById('kb-search-input');
+            const resultsContainer = document.getElementById('kb-search-results-container');
+            const resultsList = document.getElementById('kb-search-results-list');
+            
+            if (!input || !resultsContainer || !resultsList) return;
+            
+            const statsDashboard = document.getElementById('kb-stats-dashboard');
+            const categoriesGrid = document.getElementById('kb-categories-grid');
+            
+            const query = input.value.trim().toLowerCase();
+            
+            if (query === '') {
+                resultsContainer.classList.add('hidden');
+                if (statsDashboard) statsDashboard.classList.remove('hidden');
+                if (categoriesGrid) categoriesGrid.classList.remove('hidden');
+                return;
+            }
+            
+            const filtered = DB.articles.filter(art => 
+                art.title.toLowerCase().includes(query) || 
+                art.category.toLowerCase().includes(query) || 
+                art.content.toLowerCase().includes(query)
+            );
+            
+            if (statsDashboard) statsDashboard.classList.add('hidden');
+            if (categoriesGrid) categoriesGrid.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+            
+            resultsList.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                resultsList.innerHTML = `
+                    <div class="col-span-full text-center py-8 text-xs text-on-surface-variant dark:text-[#a0b2c1] italic">
+                        No articles found matching "${input.value.trim()}".
+                    </div>
+                `;
+                return;
+            }
+            
+            filtered.forEach(art => {
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm hover:shadow-md hover:border-primary transition-all cursor-pointer group flex flex-col justify-between";
+                card.onclick = () => showArticleModal(art);
+                
+                let badgeClass = "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300";
+                if (art.status === 'DRAFT') badgeClass = "bg-error-container text-on-error-container border border-red-200/50";
+                
+                const snippet = art.content.length > 120 ? art.content.substring(0, 120) + '...' : art.content;
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-sm">
+                            <span class="text-[9px] font-bold px-2 py-0.5 bg-surface-container dark:bg-[#1f2d3a] text-primary dark:text-[#b4c5ff] rounded-full">${art.category}</span>
+                            <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase ${badgeClass}">${art.status}</span>
+                        </div>
+                        <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8] group-hover:text-primary dark:group-hover:text-[#b4c5ff] transition-colors">${art.title}</h3>
+                        <p class="text-[11px] text-on-surface-variant dark:text-[#a0b2c1] mt-2 leading-relaxed">${snippet}</p>
+                    </div>
+                    <div class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] mt-md pt-sm border-t border-surface-container dark:border-[#344859]/30">
+                        Edited by ${art.author || 'Agent'} • ${art.edited || '2h ago'}
+                    </div>
+                `;
+                resultsList.appendChild(card);
+            });
+        }
+        
+        function clearKbSearch() {
+            const input = document.getElementById('kb-search-input');
+            if (input) {
+                input.value = '';
+                applyKbSearch();
+            }
+        }
+
+        function showArticleModal(art) {
+            activeKbArticle = art;
+            isEditingKbArticle = false;
+            
+            document.getElementById('modal-article-category').textContent = art.category;
+            document.getElementById('modal-article-title').textContent = art.title;
+            document.getElementById('modal-article-meta').textContent = `Edited by ${art.author || 'Agent'} • ${art.edited || '2h ago'}`;
+            document.getElementById('modal-article-content').textContent = art.content;
+            
+            const statusEl = document.getElementById('modal-article-status');
+            statusEl.textContent = art.status;
+            statusEl.className = `text-[9px] px-2 py-0.5 rounded font-bold uppercase mr-auto flex items-center ${
+                art.status === 'PUBLISHED' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300' : 'bg-error-container text-on-error-container border border-red-200/50'
+            }`;
+
+            document.getElementById('modal-article-view-mode').classList.remove('hidden');
+            document.getElementById('modal-article-edit-mode').classList.add('hidden');
+            
+            const publishBtn = document.getElementById('modal-article-publish-btn');
+            if (art.status === 'DRAFT') {
+                publishBtn.classList.remove('hidden');
+            } else {
+                publishBtn.classList.add('hidden');
+            }
+
+            const editBtn = document.getElementById('modal-article-edit-btn');
+            editBtn.textContent = 'Edit';
+            editBtn.className = "h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap";
+            
+            const deleteBtn = document.getElementById('modal-article-delete-btn');
+            if (deleteBtn) deleteBtn.classList.remove('hidden');
+            
+            const closeBtn = document.getElementById('modal-article-close-btn');
+            closeBtn.className = "hidden";
+            
+            document.getElementById('article-detail-modal').classList.remove('hidden');
+        }
+
+        function toggleKbArticleEdit() {
+            if (!activeKbArticle) return;
+
+            const editBtn = document.getElementById('modal-article-edit-btn');
+            const closeBtn = document.getElementById('modal-article-close-btn');
+            const publishBtn = document.getElementById('modal-article-publish-btn');
+            const deleteBtn = document.getElementById('modal-article-delete-btn');
+
+            if (!isEditingKbArticle) {
+                isEditingKbArticle = true;
+                
+                document.getElementById('modal-article-title-input').value = activeKbArticle.title;
+                document.getElementById('modal-article-content-input').value = activeKbArticle.content;
+                
+                document.getElementById('modal-article-view-mode').classList.add('hidden');
+                document.getElementById('modal-article-edit-mode').classList.remove('hidden');
+                
+                publishBtn.classList.add('hidden');
+                deleteBtn.classList.add('hidden');
+                
+                editBtn.textContent = 'Save';
+                editBtn.className = "h-9 px-md bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap";
+                
+                closeBtn.textContent = 'Cancel';
+                closeBtn.className = "h-9 px-md border border-outline-variant dark:border-[#344859] hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-xs whitespace-nowrap";
+            } else {
+                const newTitle = document.getElementById('modal-article-title-input').value.trim();
+                const newContent = document.getElementById('modal-article-content-input').value.trim();
+                
+                if (!newTitle || !newContent) {
+                    showToast('Title and content cannot be empty.', 'error');
+                    return;
+                }
+                
+                DB_Helper.updateArticle(activeKbArticle.id, newTitle, activeKbArticle.category, newContent, activeKbArticle.tags || '', activeKbArticle.status === 'PUBLISHED')
+                    .then(() => DB_Helper.syncArticles(DB))
+                    .then(() => {
+                        renderKbArticles();
+                        updateCounts();
+                        showArticleModal(activeKbArticle);
+                        showToast('Article updated successfully.');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Lỗi cập nhật: ' + err.message, 'error');
+                    });
+            }
+        }
+
+        function publishKbArticle() {
+            if (!activeKbArticle) return;
+            
+            DB_Helper.updateArticle(activeKbArticle.id, activeKbArticle.title, activeKbArticle.category, activeKbArticle.content, activeKbArticle.tags || '', true)
+                .then(() => DB_Helper.syncArticles(DB))
+                .then(() => {
+                    showToast(`Article "${activeKbArticle.title}" published successfully.`);
+                    showArticleModal(activeKbArticle);
+                    updateCounts();
+                    renderKbArticles();
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Lỗi xuất bản: ' + err.message, 'error');
+                });
+        }
+
+        function deleteKbArticle(id, event) {
+            if (event) event.stopPropagation();
+            
+            const art = DB.articles.find(a => a.id === id);
+            if (!art) return;
+            
+            const confirmed = confirm(`Are you sure you want to delete the article "${art.title}"?`);
+            if (confirmed) {
+                DB_Helper.deleteArticle(id)
+                    .then(() => DB_Helper.syncArticles(DB))
+                    .then(() => {
+                        if (activeKbArticle && activeKbArticle.id === id) {
+                            document.getElementById('article-detail-modal').classList.add('hidden');
+                            activeKbArticle = null;
+                        }
+                        showToast('Article deleted successfully.');
+                        updateCounts();
+                        renderKbArticles();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Lỗi xóa bài viết: ' + err.message, 'error');
+                    });
+            }
+        }
+        
+        function deleteKbArticleFromModal() {
+            if (!activeKbArticle) return;
+            deleteKbArticle(activeKbArticle.id);
+        }
+
+        function handleKbArticleCloseBtnClick() {
+            if (isEditingKbArticle) {
+                isEditingKbArticle = false;
+                showArticleModal(activeKbArticle);
+            } else {
+                document.getElementById('article-detail-modal').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

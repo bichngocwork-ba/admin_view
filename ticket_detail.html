@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Ticket Details // Agent Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: {
+                    "error": "#ba1a1a", "error-container": "#ffdad6", "on-error-container": "#93000a",
+                    "primary-container": "#2563eb", "background": "#f6faff", "on-background": "#141d23",
+                    "on-primary": "#ffffff", "on-surface": "#141d23", "outline-variant": "#bcc9ce",
+                    "secondary-container": "#dee0e4", "on-secondary-container": "#606366",
+                    "primary": "#004ac6", "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#3d494d", "surface-container": "#e6eff8",
+                    "surface-container-high": "#e0e9f2", "surface-container-low": "#ecf5fe",
+                    "surface": "#f6faff", "inverse-surface": "#293138", "inverse-on-surface": "#e9f2fb",
+                    dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
+                        "surface-container-high": "#1f2d3a", "surface-container-low": "#0d161d",
+                        "on-surface": "#f0f4f8", "on-surface-variant": "#a0b2c1",
+                        "outline-variant": "#344859" }
+                },
+                spacing: { "xl":"48px","sm":"16px","base":"4px","md":"24px","gutter":"24px","xs":"8px","container-max":"1440px","lg":"32px" },
+                fontFamily: { "sans": ["Inter","sans-serif"], "headline": ["Inter","sans-serif"] }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #bcc9ce; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #344859; }
+    </style>
+    <script src="supabase-helper.js?v=2"></script>
+    <script src="shared.js"></script>
+</head>
+<body class="bg-background text-on-surface overflow-hidden dark:bg-[#0b1216] dark:text-[#f0f4f8]">
+
+    <div id="nav-container"></div>
+
+    <div class="pt-[64px]">
+        <!-- TICKET DETAIL CONTAINER -->
+        <main class="flex h-[calc(100vh-64px)] overflow-hidden p-0">
+            <!-- Detail Left Queue list (20%) -->
+            <aside class="w-72 bg-surface-container-low dark:bg-[#0d161d] border-r border-outline-variant dark:border-[#344859] flex flex-col shrink-0">
+                <div class="p-sm bg-surface-container-high dark:bg-[#1f2d3a] border-b border-outline-variant dark:border-[#344859] flex items-center justify-between">
+                    <span class="font-bold text-[10px] tracking-wider text-on-surface-variant dark:text-[#a0b2c1] uppercase">ACTIVE QUEUE</span>
+                    <span id="queue-badge-count" class="bg-primary text-white px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
+                </div>
+                <div id="queue-ticket-list" class="flex-grow overflow-y-auto divide-y divide-outline-variant/30">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </aside>
+
+            <!-- Middle Column: Ticket info and chat (55%) -->
+            <div class="flex-1 bg-background dark:bg-[#0b1216] flex flex-col overflow-hidden">
+                <!-- Ticket Detail Header -->
+                <div class="p-md border-b border-outline-variant dark:border-[#344859] flex items-center justify-between bg-white dark:bg-[#111a22]">
+                    <div>
+                        <h2 id="detail-ticket-id" class="font-headline font-extrabold text-xl text-on-surface dark:text-[#f0f4f8]">TICKET ...</h2>
+                        <div class="flex items-center gap-sm mt-1">
+                            <span id="detail-ticket-status" class="bg-error-container text-on-error-container px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-200">OPEN</span>
+                            <span class="text-xs text-on-surface-variant dark:text-[#a0b2c1]">Submitted by: <strong id="detail-customer-name" class="text-on-surface dark:text-[#f0f4f8]">Customer</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ticket details space -->
+                <div class="flex-grow p-md overflow-y-auto space-y-md custom-scrollbar">
+                    <!-- Details Metadata Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-sm bg-white dark:bg-[#111a22] p-md rounded-xl border border-outline-variant/40 dark:border-[#344859] shadow-sm">
+                        <div>
+                            <p class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">PRODUCT</p>
+                            <p id="detail-meta-game" class="text-xs font-bold text-on-surface dark:text-[#f0f4f8]">—</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">CATEGORY</p>
+                            <p id="detail-meta-category" class="text-xs font-bold text-on-surface dark:text-[#f0f4f8]">—</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">PLATFORM</p>
+                            <p id="detail-meta-os" class="text-xs text-on-surface dark:text-[#f0f4f8]">—</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-[9px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">SUBMITTED</p>
+                            <p id="detail-meta-date" class="text-xs text-on-surface dark:text-[#f0f4f8]">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Screening Q&A box -->
+                    <div id="detail-qa-container" class="space-y-xs">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+
+                    <!-- Problem description -->
+                    <div class="space-y-xs">
+                        <h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8] border-l-4 border-primary pl-2 uppercase tracking-wider">Issue Description</h3>
+                        <div id="detail-description" class="bg-white dark:bg-[#111a22] p-sm rounded-xl border border-outline-variant/30 dark:border-[#344859] text-xs leading-relaxed text-on-surface dark:text-[#f0f4f8] whitespace-pre-wrap">
+                            —
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Right Column: AI Suggestions & Compose Editor (25%) -->
+            <div class="w-[450px] bg-surface-container-low dark:bg-[#111a22] border-l border-outline-variant dark:border-[#344859] p-md flex flex-col gap-md overflow-y-auto shrink-0">
+                <!-- Active Ticket Composer Pane -->
+                <div id="active-ticket-composer-pane" class="flex flex-col gap-md flex-grow">
+                    <!-- AI Suggestion Box -->
+                    <div id="ai-suggestion-box" class="bg-white dark:bg-[#18242e] rounded-xl border border-primary/20 dark:border-primary/40 p-sm shadow-sm relative overflow-hidden shrink-0">
+                        <div class="flex items-center justify-between mb-sm">
+                            <div class="flex items-center gap-xs">
+                                <span class="material-symbols-outlined text-primary dark:text-[#b4c5ff] text-md" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                                <span class="font-bold text-[10px] text-primary dark:text-[#b4c5ff] tracking-wider uppercase">AI SUGGESTION</span>
+                            </div>
+                            <button onclick="fetchN8nSuggestion(event)" id="ai-refresh-btn" class="text-on-surface-variant hover:text-primary dark:text-[#a0b2c1] dark:hover:text-[#b4c5ff] transition-all p-0.5 rounded hover:bg-surface-container dark:hover:bg-[#1a242d] flex items-center justify-center" title="Regenerate AI Suggestion">
+                                <span class="material-symbols-outlined text-base" id="n8n-refresh-icon">refresh</span>
+                            </button>
+                        </div>
+
+                        <!-- Content wrapper with light blue background -->
+                        <div class="bg-blue-50/80 dark:bg-primary-container/10 p-sm rounded-lg border border-blue-100 dark:border-primary/10">
+                            <!-- Idle state: show generate button -->
+                            <div id="ai-idle-state" class="flex flex-col items-center justify-center py-sm gap-xs">
+                                <p class="text-[10px] text-on-surface-variant dark:text-[#a0b2c1] text-center mb-1">Nhấn để AI tạo gợi ý phản hồi</p>
+                                <button onclick="fetchN8nSuggestion(event)" class="px-sm py-1.5 bg-primary hover:brightness-110 active:scale-95 text-white rounded-lg text-[10px] font-bold uppercase flex items-center gap-xs shadow-sm transition-all">
+                                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                                    Generate AI Suggestion
+                                </button>
+                            </div>
+
+                            <!-- Loading state -->
+                            <div id="ai-loading-state" class="hidden flex items-center gap-sm py-md">
+                                <span class="animate-spin material-symbols-outlined text-primary dark:text-[#b4c5ff] text-base">progress_activity</span>
+                                <span class="text-xs text-on-surface-variant dark:text-[#a0b2c1] font-medium">Đang lấy phản hồi từ AI...</span>
+                            </div>
+
+                            <!-- Result state: show suggestion text -->
+                            <div id="ai-result-state" class="hidden">
+                                <div class="text-[11px] leading-relaxed text-on-surface dark:text-[#f0f4f8] whitespace-pre-wrap min-h-[40px] mb-xs" id="ai-suggestion-text">
+                                    No suggestion available.
+                                </div>
+                                <div class="flex justify-end mt-sm">
+                                    <button class="px-3 py-1 bg-primary text-white hover:brightness-110 rounded text-[10px] font-bold active:scale-95 transition-all uppercase flex items-center gap-0.5 shadow-sm" onclick="applyAiSuggestion()">
+                                        <span class="material-symbols-outlined text-[12px]">check_circle</span>
+                                        Apply Draft
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canned Responses Quick insert -->
+                    <div class="space-y-xs">
+                        <h4 class="font-bold text-[10px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">INSERT CANNED TEMPLATE</h4>
+                        <div class="relative">
+                            <select id="canned-template-select" class="w-full bg-white dark:bg-[#0d161d] border border-outline-variant dark:border-[#344859] rounded-lg px-2 py-1.5 text-xs outline-none text-on-surface dark:text-[#f0f4f8] focus:outline-none" onchange="insertTemplateIntoResponse()">
+                                <option value="">Choose a template...</option>
+                                <!-- Loaded dynamically by JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Email Composer Card -->
+                    <div class="flex-grow flex flex-col gap-xs bg-white dark:bg-[#0d161d] border border-outline-variant dark:border-[#344859] rounded-xl p-sm shadow-sm">
+                        <div class="flex justify-between items-center border-b border-outline-variant/30 pb-xs mb-xs">
+                            <h4 class="font-bold text-[10px] text-on-surface-variant dark:text-[#a0b2c1] uppercase tracking-wider">EMAIL COMPOSER</h4>
+                            <span class="text-[9px] text-green-500 font-semibold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                Ready
+                            </span>
+                        </div>
+                        <!-- Email Headers -->
+                        <div class="space-y-1.5 text-xs pb-xs border-b border-outline-variant/30">
+                            <div class="flex items-center gap-xs">
+                                <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">From:</span>
+                                <input type="text" class="flex-1 bg-transparent border-none p-0 focus:ring-0 outline-none text-[11px] text-on-surface dark:text-[#f0f4f8] cursor-default font-semibold focus:outline-none" value="loidiriengf4@gmail.com" readonly>
+                            </div>
+                            <div class="flex items-center gap-xs">
+                                <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">To:</span>
+                                <input id="email-to-field" type="text" class="flex-1 bg-transparent border-none p-0 focus:ring-0 outline-none text-[11px] text-on-surface dark:text-[#f0f4f8] cursor-text font-semibold focus:outline-none" value="">
+                            </div>
+                            <div class="flex items-center gap-xs">
+                                <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">Subject:</span>
+                                <input id="email-subject-field" type="text" class="flex-1 bg-transparent border-none p-0 focus:ring-0 outline-none text-[11px] text-on-surface dark:text-[#f0f4f8] cursor-default font-semibold focus:outline-none" value="" readonly>
+                            </div>
+                        </div>
+                        <!-- Email Body Area -->
+                        <textarea id="agent-response-textarea" class="flex-grow w-full bg-transparent border-none p-0 mt-xs focus:ring-0 outline-none text-xs text-on-surface dark:text-[#f0f4f8] resize-none min-h-[150px] focus:outline-none" placeholder="Write your email reply here..."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-2">
+                        <button id="send-email-btn" class="w-full bg-primary hover:brightness-110 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-xs shadow-md active:scale-[0.98] transition-all" onclick="sendTicketReply()">
+                            <span class="material-symbols-outlined text-[16px]" id="send-email-btn-icon">mail</span>
+                            <span id="send-email-btn-text">SEND EMAIL REPLY</span>
+                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="py-1.5 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded text-[10px] font-bold flex items-center justify-center gap-base hover:bg-surface-container-high dark:hover:bg-[#1f2d3a] transition-all uppercase" onclick="saveTicketDraft()">
+                                <span class="material-symbols-outlined text-[14px]">save</span>
+                                SAVE DRAFT
+                            </button>
+                            <button class="py-1.5 border border-outline dark:border-[#526c81] text-[#ba1a1a] rounded text-[10px] font-bold flex items-center justify-center gap-base hover:bg-red-50 dark:hover:bg-red-950/20 transition-all uppercase" onclick="resolveActiveTicket()">
+                                <span class="material-symbols-outlined text-[14px]">cancel</span>
+                                RESOLVE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resolved Ticket View Pane -->
+                <div id="resolved-ticket-view-pane" class="hidden flex flex-col gap-sm flex-grow bg-white dark:bg-[#0d161d] border border-outline-variant dark:border-[#344859] rounded-xl p-sm shadow-sm">
+                    <div class="flex justify-between items-center border-b border-outline-variant/30 pb-xs mb-xs">
+                        <h4 class="font-bold text-[10px] text-green-600 dark:text-green-400 uppercase tracking-wider flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm font-bold">check_circle</span>
+                            Sent Email Reply
+                        </h4>
+                        <span class="text-[8px] bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300 px-1.5 py-0.5 rounded font-bold uppercase border border-green-200/50">Resolved</span>
+                    </div>
+                    
+                    <!-- Email Headers -->
+                    <div class="space-y-1.5 text-xs pb-xs border-b border-outline-variant/30">
+                        <div class="flex items-center gap-xs">
+                            <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">From:</span>
+                            <span class="text-[11px] font-semibold text-on-surface dark:text-[#f0f4f8]">loidiriengf4@gmail.com</span>
+                        </div>
+                        <div class="flex items-center gap-xs">
+                            <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">To:</span>
+                            <span id="resolved-email-to" class="text-[11px] font-semibold text-on-surface dark:text-[#f0f4f8]">customer@email.com</span>
+                        </div>
+                        <div class="flex items-center gap-xs">
+                            <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">Date Sent:</span>
+                            <span id="resolved-email-date" class="text-[11px] font-semibold text-on-surface-variant dark:text-[#a0b2c1]">May 12, 2026 • 21:30</span>
+                        </div>
+                        <div class="flex items-center gap-xs">
+                            <span class="w-12 text-on-surface-variant dark:text-[#a0b2c1] font-medium text-[11px]">Subject:</span>
+                            <span id="resolved-email-subject" class="text-[11px] font-semibold text-on-surface dark:text-[#f0f4f8]">Re: VALORANT Bug Report</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Email Body Area -->
+                    <div id="resolved-email-body" class="flex-grow p-xs mt-xs text-xs text-on-surface dark:text-[#f0f4f8] whitespace-pre-wrap overflow-y-auto leading-relaxed italic bg-surface-container-low dark:bg-[#0d161d] rounded-lg border border-outline-variant/10 min-h-[200px]">
+                        Reply content will go here.
+                    </div>
+                    
+                    <!-- Notice banner at the bottom -->
+                    <div class="mt-xs p-xs bg-surface-container dark:bg-[#18242e] rounded-lg border border-outline-variant/30 text-[10px] text-center text-on-surface-variant dark:text-[#a0b2c1] leading-relaxed">
+                        <span class="font-bold">Notice:</span> This ticket is closed. The final reply has been dispatched to the customer.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirm Restore Draft Modal -->
+    <div id="confirm-restore-draft-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden animate-in fade-in duration-200">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col p-lg animate-in zoom-in duration-200">
+            <div class="flex justify-between items-center border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <h3 class="font-headline font-extrabold text-lg text-on-surface dark:text-[#f0f4f8] uppercase flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-amber-500">warning</span>
+                    Draft Detected
+                </h3>
+            </div>
+            <div class="py-md text-xs text-on-surface-variant dark:text-[#a0b2c1] leading-relaxed">
+                You have an unsaved draft on this ticket. Do you want to restore it?
+            </div>
+            <div class="border-t border-outline-variant dark:border-[#344859] pt-md mt-md flex justify-end gap-sm">
+                <button class="px-md py-2 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors" onclick="discardSavedDraft()">No</button>
+                <button class="px-md py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm" onclick="restoreSavedDraft()">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Overwrite Draft Modal -->
+    <div id="confirm-overwrite-draft-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-md bg-black/50 backdrop-blur-sm hidden animate-in fade-in duration-200">
+        <div class="bg-surface-container-lowest dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col p-lg animate-in zoom-in duration-200">
+            <div class="flex justify-between items-center border-b border-outline-variant dark:border-[#344859] pb-xs mb-sm">
+                <h3 class="font-headline font-extrabold text-lg text-on-surface dark:text-[#f0f4f8] uppercase flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-amber-500">warning</span>
+                    Draft Conflict
+                </h3>
+            </div>
+            <div class="py-md text-xs text-on-surface-variant dark:text-[#a0b2c1] leading-relaxed">
+                You have an existing draft for this ticket. Do you want to keep it or overwrite it with the new template?
+            </div>
+            <div class="border-t border-outline-variant dark:border-[#344859] pt-md mt-md flex justify-end gap-sm">
+                <button class="px-md py-2 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors" id="btn-keep-overwrite">Keep Draft</button>
+                <button class="px-md py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm" id="btn-overwrite-confirm">Overwrite</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-wrapper"></div>
+
+    <script>
+        const user = checkAuth();
+        document.getElementById('nav-container').innerHTML = getNavHTML('ticket-detail');
+        document.getElementById('toast-wrapper').innerHTML = getToastHTML();
+        initUserUI();
+
+        const DB = window.DB;
+        let activeTicketId = localStorage.getItem('activeTicketId');
+        let lastLoadedTicketId = null;
+        let bypassRestoreDraftPrompt = false;
+        let overwriteCallback = null;
+
+        // Redirect to list if no active ticket
+        if (!activeTicketId) {
+            window.location.replace('ticket_list.html');
+        }
+
+        DB_Helper.init().then(() => {
+            return Promise.all([
+                DB_Helper.syncTickets(DB),
+                DB_Helper.syncTemplates(DB)
+            ]);
+        }).then(() => {
+            // Check if active ticket exists in DB
+            const check = DB.tickets.find(t => t.id === activeTicketId);
+            if (!check) {
+                // Try to fallback to first ticket
+                if (DB.tickets.length > 0) {
+                    activeTicketId = DB.tickets[0].id;
+                    localStorage.setItem('activeTicketId', activeTicketId);
+                } else {
+                    window.location.replace('ticket_list.html');
+                    return;
+                }
+            }
+            syncDraftStatuses();
+            renderTicketDetail();
+            updateOpenBadge();
+        }).catch(err => {
+            console.error(err);
+            showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+        });
+
+        function updateOpenBadge() {
+            const badge = document.getElementById('open-ticket-count-badge');
+            const openCount = DB.tickets.filter(t => t.status === 'Open').length;
+            if (badge) {
+                badge.textContent = openCount;
+                badge.classList.toggle('hidden', openCount === 0);
+            }
+            const queueBadge = document.getElementById('queue-badge-count');
+            const activeCount = DB.tickets.filter(t => t.status !== 'Resolved').length;
+            if (queueBadge) {
+                queueBadge.textContent = activeCount;
+            }
+        }
+
+        function syncDraftStatuses() {
+            const drafts = getTicketDrafts();
+            DB.tickets.forEach(t => {
+                if (drafts[t.id]) {
+                    if (t.status !== 'Resolved') t.status = 'Drafting';
+                } else {
+                    if (t.status === 'Drafting') t.status = 'Open';
+                }
+            });
+        }
+
+        function getTicketDrafts() {
+            return JSON.parse(localStorage.getItem('ticketDrafts') || '{}');
+        }
+
+        function saveTicketDraftText(ticketId, text) {
+            const drafts = getTicketDrafts();
+            if (text === null || text.trim() === '') {
+                delete drafts[ticketId];
+            } else {
+                drafts[ticketId] = text;
+            }
+            localStorage.setItem('ticketDrafts', JSON.stringify(drafts));
+        }
+
+        function renderTicketDetail() {
+            syncDraftStatuses();
+            
+            if (activeTicketId !== lastLoadedTicketId) {
+                lastLoadedTicketId = activeTicketId;
+                localStorage.setItem('activeTicketId', activeTicketId);
+                const drafts = getTicketDrafts();
+                if (drafts[activeTicketId]) {
+                    const ticketObj = DB.tickets.find(tick => tick.id === activeTicketId);
+                    if (ticketObj && ticketObj.status !== 'Resolved' && !bypassRestoreDraftPrompt) {
+                        document.getElementById('confirm-restore-draft-modal').classList.remove('hidden');
+                    }
+                } else {
+                    document.getElementById('agent-response-textarea').value = '';
+                }
+            }
+
+            // Update queue list
+            const qlist = document.getElementById('queue-ticket-list');
+            if (qlist) {
+                qlist.innerHTML = '';
+                
+                let activeQueue = DB.tickets.filter(t => t.status !== 'Resolved');
+                const activeT = DB.tickets.find(tick => tick.id === activeTicketId);
+                if (activeT && activeT.status === 'Resolved' && !activeQueue.some(x => x.id === activeTicketId)) {
+                    activeQueue.push(activeT);
+                }
+                activeQueue.forEach(t => {
+                    const isActive = t.id === activeTicketId;
+                    const div = document.createElement('div');
+                    div.className = `${isActive ? 'bg-surface-container-highest dark:bg-[#1c2a36] border-l-4 border-primary' : 'hover:bg-surface-container-high dark:hover:bg-[#18242e]'} px-sm py-3 cursor-pointer transition-colors border-b border-outline-variant/30`;
+                    div.onclick = () => {
+                        activeTicketId = t.id;
+                        renderTicketDetail();
+                    };
+                    
+                    let badgeClass = "bg-error-container text-on-error-container border-red-200";
+                    if (t.status === 'Drafting') badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+                    if (t.status === 'Resolved') badgeClass = "bg-green-100 text-green-800 border-green-200";
+                    const statusBadge = `<span class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase border ${badgeClass}">${t.status === 'Drafting' ? 'In Progress' : t.status}</span>`;
+
+                    const displayId = t.id.startsWith('#') ? t.id : '#' + t.id;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-base">
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs font-bold ${isActive ? 'text-primary dark:text-[#b4c5ff]' : 'text-on-surface-variant dark:text-[#a0b2c1]'}">${displayId}</span>
+                                ${statusBadge}
+                            </div>
+                            <span class="text-[9px] text-on-surface-variant dark:text-[#a0b2c1]">${t.date.split('•')[0]}</span>
+                        </div>
+                        <p class="text-xs font-bold text-on-surface dark:text-[#f0f4f8] truncate">${t.customer}</p>
+                        <p class="text-[11px] text-on-secondary-fixed-variant dark:text-[#a0b2c1] truncate">${t.description}</p>
+                    `;
+                    qlist.appendChild(div);
+                });
+            }
+
+            const t = DB.tickets.find(tick => tick.id === activeTicketId);
+            if (!t) return;
+
+            const headerId = t.id.startsWith('#') ? t.id : '#' + t.id;
+            document.getElementById('detail-ticket-id').textContent = `TICKET ${headerId}`;
+            document.getElementById('detail-customer-name').textContent = t.customer;
+            
+            const statusEl = document.getElementById('detail-ticket-status');
+            statusEl.textContent = (t.status === 'Drafting' ? 'In Progress' : t.status).toUpperCase();
+            statusEl.className = `px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                t.status === 'Open' ? 'bg-error-container text-on-error-container border-red-200' :
+                t.status === 'Drafting' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                'bg-green-100 text-green-800 border-green-200'
+            }`;
+
+            document.getElementById('detail-meta-game').textContent = t.game;
+            document.getElementById('detail-meta-category').textContent = t.category;
+            document.getElementById('detail-meta-os').textContent = t.os || 'Windows 11';
+            document.getElementById('detail-meta-date').textContent = t.date;
+            document.getElementById('detail-description').textContent = t.description;
+
+            // Load Q&A
+            const qaContainer = document.getElementById('detail-qa-container');
+            qaContainer.innerHTML = '';
+            if (t.questions && t.questions.length > 0) {
+                qaContainer.innerHTML = `<h3 class="font-bold text-sm text-on-surface dark:text-[#f0f4f8] border-l-4 border-primary pl-2 uppercase tracking-wider mb-xs">Screening Questions</h3>`;
+                const qabox = document.createElement('div');
+                qabox.className = "space-y-sm bg-surface-container-low dark:bg-[#0d161d] p-sm rounded-lg border border-outline-variant/30";
+                
+                t.questions.forEach(q => {
+                    qabox.innerHTML += `
+                        <div>
+                            <p class="text-[11px] text-on-secondary-fixed-variant dark:text-[#a0b2c1] mb-base italic">${q.q}</p>
+                            <p class="text-xs text-on-surface dark:text-[#f0f4f8]">${q.a}</p>
+                        </div>
+                    `;
+                });
+                qaContainer.appendChild(qabox);
+            }
+
+            // Load chat feed
+            const feed = document.getElementById('detail-chat-feed');
+            if (feed) {
+                feed.innerHTML = '';
+                t.replies.forEach(r => {
+                    const isCustomer = r.sender === 'customer';
+                    const div = document.createElement('div');
+                    div.className = `flex ${isCustomer ? 'justify-start' : 'justify-end'} gap-xs`;
+                    
+                    const initials = isCustomer ? t.customerInitials || 'P' : 'G24';
+                    const senderName = isCustomer ? t.customer : "Agent G-24";
+                    
+                    div.innerHTML = `
+                        <div class="flex items-start gap-xs max-w-[85%] ${isCustomer ? '' : 'flex-row-reverse'}">
+                            <div class="w-8 h-8 rounded-full ${isCustomer ? 'bg-[#dee0e4] dark:bg-[#1f2d3a] text-on-secondary-container' : 'bg-primary text-white'} flex items-center justify-center text-xs font-bold shrink-0">
+                                ${initials}
+                            </div>
+                            <div class="space-y-base">
+                                <div class="flex items-baseline gap-xs ${isCustomer ? '' : 'flex-row-reverse'}">
+                                    <span class="text-[11px] font-bold text-on-surface dark:text-[#f0f4f8]">${senderName}</span>
+                                    <span class="text-[9px] text-on-surface-variant dark:text-[#a0b2c1]">${r.time}</span>
+                                </div>
+                                <div class="p-sm rounded-xl text-xs leading-relaxed ${isCustomer ? 'bg-white dark:bg-[#111a22] border border-outline-variant/30' : 'bg-primary text-white'} whitespace-pre-wrap">
+                                    ${r.text}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    feed.appendChild(div);
+                });
+            }
+
+            // Load AI suggestion
+            const aiSuggestEl = document.getElementById('ai-suggestion-text');
+            const aiBox = document.getElementById('ai-suggestion-box');
+            const aiIdleState = document.getElementById('ai-idle-state');
+            const aiLoadingState = document.getElementById('ai-loading-state');
+            const aiResultState = document.getElementById('ai-result-state');
+            const aiRefreshBtn = document.getElementById('ai-refresh-btn');
+            if (aiSuggestEl && aiBox) {
+                aiBox.classList.remove('hidden');
+                if (aiLoadingState) aiLoadingState.classList.add('hidden');
+                if (t.aiSuggestion && t.aiSuggestion.trim()) {
+                    aiSuggestEl.textContent = t.aiSuggestion;
+                    if (aiIdleState) aiIdleState.classList.add('hidden');
+                    if (aiResultState) aiResultState.classList.remove('hidden');
+                    if (aiRefreshBtn) aiRefreshBtn.classList.remove('hidden');
+                } else {
+                    if (aiIdleState) aiIdleState.classList.remove('hidden');
+                    if (aiResultState) aiResultState.classList.add('hidden');
+                    if (aiRefreshBtn) aiRefreshBtn.classList.add('hidden');
+                }
+            }
+
+            // Load canned templates list into Select dropdown
+            const select = document.getElementById('canned-template-select');
+            if (select) {
+                select.innerHTML = '<option value="">Choose a template...</option>';
+                DB.templates.forEach(tpl => {
+                    const opt = document.createElement('option');
+                    opt.value = tpl.id;
+                    opt.textContent = `[${tpl.category}] ${tpl.name}`;
+                    select.appendChild(opt);
+                });
+            }
+            
+            // Outgoing email composer dynamic values
+            let customerEmail = '';
+            if (t.questions) {
+                const emailQuestion = t.questions.find(q => q.id.toLowerCase().includes('email') || q.q.toLowerCase().includes('email'));
+                if (emailQuestion) {
+                    customerEmail = emailQuestion.a;
+                }
+            }
+            if (!customerEmail || customerEmail.endsWith('@email.com')) {
+                customerEmail = 'phamhachi1706@gmail.com';
+            }
+            
+            const emailToField = document.getElementById('email-to-field');
+            const emailSubjectField = document.getElementById('email-subject-field');
+            if (emailToField) emailToField.value = customerEmail;
+            if (emailSubjectField) {
+                const gamePrefix = t.game ? `[${t.game}] ` : '';
+                emailSubjectField.value = `Re: ${gamePrefix}${t.category} - Ticket ${t.id}`;
+            }
+            
+            // Toggle active/resolved panels
+            const activePane = document.getElementById('active-ticket-composer-pane');
+            const resolvedPane = document.getElementById('resolved-ticket-view-pane');
+            
+            if (activePane && resolvedPane) {
+                if (t.status === 'Resolved') {
+                    activePane.classList.add('hidden');
+                    resolvedPane.classList.remove('hidden');
+                    document.getElementById('resolved-email-to').textContent = customerEmail;
+                    
+                    const gamePrefix = t.game ? `[${t.game}] ` : '';
+                    document.getElementById('resolved-email-subject').textContent = `Re: ${gamePrefix}${t.category} - Ticket ${t.id}`;
+                    
+                    const agentReply = t.replies.find(r => r.sender === 'agent');
+                    document.getElementById('resolved-email-date').textContent = agentReply ? agentReply.time : t.date;
+                    document.getElementById('resolved-email-body').textContent = agentReply ? agentReply.text : 'No response content.';
+                } else {
+                    activePane.classList.remove('hidden');
+                    resolvedPane.classList.add('hidden');
+                    
+                    const currentDrafts = getTicketDrafts();
+                    document.getElementById('agent-response-textarea').value = currentDrafts[activeTicketId] || '';
+                }
+            }
+            updateOpenBadge();
+        }
+
+        function discardSavedDraft() {
+            document.getElementById('confirm-restore-draft-modal').classList.add('hidden');
+            saveTicketDraftText(activeTicketId, null);
+            document.getElementById('agent-response-textarea').value = '';
+            syncDraftStatuses();
+            renderTicketDetail();
+        }
+
+        function restoreSavedDraft() {
+            document.getElementById('confirm-restore-draft-modal').classList.add('hidden');
+            const drafts = getTicketDrafts();
+            document.getElementById('agent-response-textarea').value = drafts[activeTicketId] || '';
+        }
+
+        function applyAiSuggestion() {
+            const text = document.getElementById('ai-suggestion-text').textContent.trim();
+            document.getElementById('agent-response-textarea').value = text;
+            saveTicketDraftText(activeTicketId, text);
+            syncDraftStatuses();
+            renderTicketDetail();
+            showToast('AI Draft inserted into response editor');
+        }
+
+        let isFetchingN8n = false;
+        function fetchN8nSuggestion(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            const t = DB.tickets.find(tick => tick.id === activeTicketId);
+            if (!t) return;
+
+            if (isFetchingN8n) return;
+            isFetchingN8n = true;
+
+            const aiSuggestEl = document.getElementById('ai-suggestion-text');
+            const aiIdleState = document.getElementById('ai-idle-state');
+            const aiLoadingState = document.getElementById('ai-loading-state');
+            const aiResultState = document.getElementById('ai-result-state');
+            const aiRefreshBtn = document.getElementById('ai-refresh-btn');
+            const refreshIcon = document.getElementById('n8n-refresh-icon');
+
+            if (aiIdleState) aiIdleState.classList.add('hidden');
+            if (aiResultState) aiResultState.classList.add('hidden');
+            if (aiLoadingState) aiLoadingState.classList.remove('hidden');
+            if (aiRefreshBtn) aiRefreshBtn.classList.add('hidden');
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+            let customerEmail = '';
+            if (t.questions) {
+                const emailQuestion = t.questions.find(q => q.id.toLowerCase().includes('email') || q.q.toLowerCase().includes('email'));
+                if (emailQuestion) {
+                    customerEmail = emailQuestion.a;
+                }
+            }
+            if (!customerEmail) {
+                customerEmail = t.customer.toLowerCase().replace(/\s+/g, '.') + '@email.com';
+            }
+
+            const priority = t.priority || (t.overdue ? "High" : "Medium");
+
+            const payload = {
+                message: t.description,
+                customerName: t.customer,
+                customerEmail: customerEmail,
+                category: t.category,
+                priority: priority,
+                ticketId: t.id
+            };
+
+            const webhookUrl = 'https://tamptc.app.n8n.cloud/webhook/suggest-reply';
+
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                let suggestedReply = '';
+                if (Array.isArray(data)) {
+                    suggestedReply = data[0]?.suggestedReply || data[0]?.output || JSON.stringify(data[0]);
+                } else if (data && typeof data === 'object') {
+                    suggestedReply = data.suggestedReply || data.output || JSON.stringify(data);
+                } else {
+                    suggestedReply = String(data);
+                }
+
+                t.aiSuggestion = suggestedReply;
+                t.n8nFetched = true;
+
+                if (aiSuggestEl) aiSuggestEl.textContent = suggestedReply;
+                if (aiLoadingState) aiLoadingState.classList.add('hidden');
+                if (aiResultState) aiResultState.classList.remove('hidden');
+                if (aiRefreshBtn) aiRefreshBtn.classList.remove('hidden');
+
+                DB_Helper.saveAiSuggestion(t.id, suggestedReply).catch(console.error);
+                showToast('AI đã tạo gợi ý phản hồi!');
+            })
+            .catch(error => {
+                console.error('n8n connection error:', error);
+                if (aiLoadingState) aiLoadingState.classList.add('hidden');
+                if (aiIdleState) {
+                    aiIdleState.classList.remove('hidden');
+                    aiIdleState.innerHTML = `
+                        <span class="material-symbols-outlined text-2xl text-error/60">error_outline</span>
+                        <p class="text-[10px] text-error dark:text-red-400 text-center font-semibold">Không thể kết nối đến AI</p>
+                        <p class="text-[9px] text-on-surface-variant dark:text-[#a0b2c1] text-center">Kiểm tra workflow n8n đã bật chưa</p>
+                        <button onclick="fetchN8nSuggestion(event)" class="px-sm py-1.5 bg-surface-container hover:bg-surface-container-high dark:bg-[#1a242d] dark:hover:bg-[#1f2d3a] rounded-lg border border-outline-variant/30 text-[10px] font-bold transition-all flex items-center gap-xs mt-1">
+                            <span class="material-symbols-outlined text-[12px]">refresh</span> Thử lại
+                        </button>
+                    `;
+                }
+                if (aiResultState) aiResultState.classList.add('hidden');
+                showToast('Lỗi kết nối AI: ' + error.message, 'error');
+            })
+            .finally(() => {
+                isFetchingN8n = false;
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+            });
+        }
+
+        function insertTemplateIntoResponse() {
+            const id = document.getElementById('canned-template-select').value;
+            if (!id) return;
+            const tpl = DB.templates.find(item => item.id === id);
+            if (tpl) {
+                const textarea = document.getElementById('agent-response-textarea');
+                if (textarea) {
+                    const drafts = getTicketDrafts();
+                    const draftContent = drafts[activeTicketId];
+                    if (draftContent && draftContent.trim() && textarea.value.trim() !== tpl.content) {
+                        const modal = document.getElementById('confirm-overwrite-draft-modal');
+                        modal.classList.remove('hidden');
+                        
+                        document.getElementById('btn-keep-overwrite').onclick = () => {
+                            modal.classList.add('hidden');
+                            textarea.value = draftContent;
+                            document.getElementById('canned-template-select').value = "";
+                        };
+                        
+                        document.getElementById('btn-overwrite-confirm').onclick = () => {
+                            modal.classList.add('hidden');
+                            textarea.value = tpl.content;
+                            saveTicketDraftText(activeTicketId, tpl.content);
+                            const t = DB.tickets.find(tick => tick.id === activeTicketId);
+                            if (t && t.status !== 'Resolved') {
+                                t.status = 'Drafting';
+                            }
+                            renderTicketDetail();
+                        };
+                        return;
+                    }
+                    textarea.value = tpl.content;
+                    saveTicketDraftText(activeTicketId, tpl.content);
+                    const t = DB.tickets.find(tick => tick.id === activeTicketId);
+                    if (t && t.status !== 'Resolved') {
+                        t.status = 'Drafting';
+                    }
+                    renderTicketDetail();
+                }
+            }
+        }
+
+        function saveTicketDraft() {
+            const val = document.getElementById('agent-response-textarea').value.trim();
+            if (!val) {
+                showToast('Draft is empty', 'error');
+                return;
+            }
+            saveTicketDraftText(activeTicketId, val);
+            syncDraftStatuses();
+            renderTicketDetail();
+            showToast('Draft saved successfully');
+        }
+
+        let isSendingMail = false;
+        function sendTicketReply() {
+            const textarea = document.getElementById('agent-response-textarea');
+            const val = textarea.value.trim();
+            if (!val) {
+                showToast('Vui lòng nhập nội dung phản hồi.', 'error');
+                return;
+            }
+
+            const t = DB.tickets.find(tick => tick.id === activeTicketId);
+            if (!t) return;
+
+            if (isSendingMail) return;
+            isSendingMail = true;
+
+            const sendBtn = document.getElementById('send-email-btn');
+            const sendBtnText = document.getElementById('send-email-btn-text');
+            const sendBtnIcon = document.getElementById('send-email-btn-icon');
+
+            if (sendBtn) sendBtn.disabled = true;
+            if (sendBtnText) sendBtnText.textContent = 'SENDING EMAIL...';
+            if (sendBtnIcon) {
+                sendBtnIcon.textContent = 'progress_activity';
+                sendBtnIcon.classList.add('animate-spin');
+            }
+
+            const recipient = document.getElementById('email-to-field').value.trim();
+            const subject = document.getElementById('email-subject-field').value.trim();
+
+            const payload = {
+                action: "send_mail",
+                ticketId: t.id,
+                customerName: t.customer,
+                customerEmail: recipient,
+                subject: subject,
+                replyText: val
+            };
+
+            const webhookUrl = 'https://tamptc.app.n8n.cloud/webhook/sendmail';
+
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text().then(text => {
+                    try {
+                        return text ? JSON.parse(text) : {};
+                    } catch (e) {
+                        return { message: text };
+                    }
+                });
+            })
+            .then(data => {
+                const now = new Date();
+                const timeStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' • ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                
+                t.replies.push({
+                    sender: "agent",
+                    text: val,
+                    time: timeStr
+                });
+                
+                t.status = 'Resolved';
+                
+                textarea.value = '';
+                saveTicketDraftText(activeTicketId, null);
+                
+                DB_Helper.saveTicketReply(t.id, val)
+                    .then(() => {
+                        return DB_Helper.syncAll(DB);
+                    })
+                    .then(() => {
+                        renderTicketDetail();
+                        updateOpenBadge();
+                        showToast('Email đã được gửi và đồng bộ lên Supabase!');
+                    })
+                    .catch(err => {
+                        console.error("Supabase sync error:", err);
+                        renderTicketDetail();
+                        updateOpenBadge();
+                        showToast('Email đã được gửi thành công qua n8n!');
+                    });
+            })
+            .catch(error => {
+                console.error('sendmail webhook error:', error);
+                showToast('Lỗi gửi mail qua n8n: ' + error.message, 'error');
+            })
+            .finally(() => {
+                isSendingMail = false;
+                if (sendBtn) sendBtn.disabled = false;
+                if (sendBtnText) sendBtnText.textContent = 'SEND EMAIL REPLY';
+                if (sendBtnIcon) {
+                    sendBtnIcon.textContent = 'mail';
+                    sendBtnIcon.classList.remove('animate-spin');
+                }
+            });
+        }
+
+        function resolveActiveTicket() {
+            const t = DB.tickets.find(tick => tick.id === activeTicketId);
+            if (t) {
+                // Gửi resolution lên Supabase
+                DB_Helper.saveTicketReply(t.id, "[Manual Resolution: Marked resolved without sending email reply]")
+                    .then(() => {
+                        t.status = 'Resolved';
+                        saveTicketDraftText(activeTicketId, null);
+                        return DB_Helper.syncAll(DB);
+                    })
+                    .then(() => {
+                        renderTicketDetail();
+                        updateOpenBadge();
+                        showToast('Ticket marked as Resolved.');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Lỗi đồng bộ resolved: ' + err.message, 'error');
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
