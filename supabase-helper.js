@@ -241,8 +241,7 @@ window.DB_Helper = {
             .select(`
                 *,
                 category:ticket_categories(category_name)
-            `)
-            .eq("is_published", true);
+            `);
 
         if (error) {
             console.error("Error syncing templates:", error);
@@ -255,11 +254,27 @@ window.DB_Helper = {
             category: temp.category?.category_name || "General",
             shortcut: "/" + temp.template_name.toLowerCase().replace(/\s+/g, '-'),
             content: temp.template_content,
-            usageCount: 0 // Mock stat or fallback
+            status: temp.is_published ? 'PUBLISHED' : 'DRAFT',
+            usageCount: 0
         }));
 
         localDB.templates.length = 0;
         localDB.templates.push(...transformedTemplates);
+
+        // Merge localStorage drafts (Supabase RLS may block fetching is_published=false)
+        const localDrafts = this.getLocalDraftTemplates();
+        console.log('[DB_Helper] localDraftTemplates from localStorage:', JSON.stringify(localDrafts));
+        localDrafts.forEach(draft => {
+            const alreadyInDB = localDB.templates.find(t => t.id === draft.id);
+            if (!alreadyInDB) {
+                localDB.templates.push(draft);
+                console.log('[DB_Helper] Merged local draft template into DB:', draft.name);
+            } else {
+                // If Supabase returned it (meaning RLS allows it), remove from localStorage
+                this.removeLocalDraftTemplate(draft.id);
+            }
+        });
+        console.log('[DB_Helper] syncTemplates complete. Total templates in memory:', localDB.templates.length, '| DRAFTs:', localDB.templates.filter(t => t.status === "DRAFT").length);
     },
 
     async syncArticles(localDB) {
@@ -286,6 +301,80 @@ window.DB_Helper = {
 
         localDB.articles.length = 0;
         localDB.articles.push(...transformedArticles);
+
+        // Merge localStorage drafts (Supabase RLS may block fetching is_published=false)
+        const localDrafts = this.getLocalDraftArticles();
+        console.log('[DB_Helper] localDraftArticles from localStorage:', JSON.stringify(localDrafts));
+        localDrafts.forEach(draft => {
+            const alreadyInDB = localDB.articles.find(a => a.id === draft.id);
+            if (!alreadyInDB) {
+                localDB.articles.push(draft);
+                console.log('[DB_Helper] Merged local draft article into DB:', draft.title);
+            } else {
+                // If Supabase returned it, remove from localStorage
+                this.removeLocalDraftArticle(draft.id);
+            }
+        });
+        console.log('[DB_Helper] syncArticles complete. Total articles in memory:', localDB.articles.length, '| DRAFTs:', localDB.articles.filter(a => a.status === "DRAFT").length);
+    },
+
+    // --- Local Draft Helpers (localStorage fallback for RLS-restricted drafts) ---
+    getLocalDraftTemplates() {
+        try { return JSON.parse(localStorage.getItem('localDraftTemplates') || '[]'); }
+        catch(e) { return []; }
+    },
+
+    saveLocalDraftTemplate(name, category, content) {
+        const drafts = this.getLocalDraftTemplates();
+        const draft = {
+            id: 'local-' + Date.now(),
+            name: name,
+            category: category,
+            shortcut: '/' + name.toLowerCase().replace(/\s+/g, '-'),
+            content: content,
+            status: 'DRAFT',
+            usageCount: 0,
+            isLocal: true
+        };
+        drafts.push(draft);
+        localStorage.setItem('localDraftTemplates', JSON.stringify(drafts));
+        console.log('[DB_Helper] Draft template saved to localStorage:', draft.name, '| Total drafts:', drafts.length);
+        return draft;
+    },
+
+    removeLocalDraftTemplate(id) {
+        const drafts = this.getLocalDraftTemplates().filter(d => d.id !== id);
+        localStorage.setItem('localDraftTemplates', JSON.stringify(drafts));
+    },
+
+    getLocalDraftArticles() {
+        try { return JSON.parse(localStorage.getItem('localDraftArticles') || '[]'); }
+        catch(e) { return []; }
+    },
+
+    saveLocalDraftArticle(title, category, content, tags) {
+        const drafts = this.getLocalDraftArticles();
+        const draft = {
+            id: 'local-' + Date.now(),
+            title: title,
+            category: category,
+            tags: tags ? tags.split(',').map(t => t.trim()) : [],
+            content: content,
+            author: 'System Admin',
+            time: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            views: 0,
+            status: 'DRAFT',
+            isLocal: true
+        };
+        drafts.push(draft);
+        localStorage.setItem('localDraftArticles', JSON.stringify(drafts));
+        console.log('[DB_Helper] Draft article saved to localStorage:', draft.title, '| Total drafts:', drafts.length);
+        return draft;
+    },
+
+    removeLocalDraftArticle(id) {
+        const drafts = this.getLocalDraftArticles().filter(d => d.id !== id);
+        localStorage.setItem('localDraftArticles', JSON.stringify(drafts));
     },
 
     // Update ticket status in Supabase
@@ -363,7 +452,7 @@ window.DB_Helper = {
     },
 
     // Create a new response template
-    async createTemplate(name, categoryName, content) {
+    async createTemplate(name, categoryName, content, isPublished = true) {
         await this.init();
         
         // Find category UUID
@@ -383,10 +472,63 @@ window.DB_Helper = {
                 category_id: cat.id,
                 template_content: content,
                 created_by: currentUser.id,
-                is_published: true
+                is_published: isPublished
             });
 
         if (error) throw error;
+    },
+
+    // Update an existing response template
+    async updateTemplate(id, name, categoryName, content, isPublished = true) {
+        await this.init();
+
+        // Find category UUID
+        const { data: cat, error: catErr } = await this.client
+            .from("ticket_categories")
+            .select("id")
+            .eq("category_name", categoryName)
+            .single();
+
+        if (catErr) throw new Error("Danh mục không tồn tại: " + categoryName);
+
+        const { error } = await this.client
+            .from("response_templates")
+            .update({
+                template_name: name,
+                category_id: cat.id,
+                template_content: content,
+                is_published: isPublished,
+                updated_at: new Date()
+            })
+            .eq("id", id);
+
+        if (error) throw error;
+    },
+
+    // Delete a response template (uses SECURITY DEFINER RPC to bypass RLS)
+    async deleteTemplate(id) {
+        await this.init();
+
+        // Try via RPC function first (bypasses RLS)
+        const { error: rpcErr } = await this.client
+            .rpc('delete_response_template', { template_id: id });
+
+        if (rpcErr) {
+            // RPC function not found — fallback to direct delete
+            if (rpcErr.code === 'PGRST202' || rpcErr.message?.includes('Could not find')) {
+                const { data, error } = await this.client
+                    .from("response_templates")
+                    .delete()
+                    .eq("id", id)
+                    .select();
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    throw new Error("quyền: Không có quyền xóa template. Chạy SQL trong Supabase Dashboard để tạo function delete_response_template.");
+                }
+            } else {
+                throw rpcErr;
+            }
+        }
     },
 
     // Create a new KB article
@@ -405,5 +547,50 @@ window.DB_Helper = {
             });
 
         if (error) throw error;
+    },
+
+    // Update an existing KB article
+    async updateArticle(id, title, category, content, tags, isPublished = true) {
+        await this.init();
+
+        const { error } = await this.client
+            .from("knowledge_base_articles")
+            .update({
+                title: title,
+                category: category,
+                content: content,
+                tags: tags,
+                is_published: isPublished,
+                updated_at: new Date()
+            })
+            .eq("id", id);
+
+        if (error) throw error;
+    },
+
+    // Delete a KB article (uses SECURITY DEFINER RPC to bypass RLS)
+    async deleteArticle(id) {
+        await this.init();
+
+        // Try via RPC function first (bypasses RLS)
+        const { error: rpcErr } = await this.client
+            .rpc('delete_kb_article', { article_id: id });
+
+        if (rpcErr) {
+            // RPC function not found — fallback to direct delete
+            if (rpcErr.code === 'PGRST202' || rpcErr.message?.includes('Could not find')) {
+                const { data, error } = await this.client
+                    .from("knowledge_base_articles")
+                    .delete()
+                    .eq("id", id)
+                    .select();
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    throw new Error("quyền: Không có quyền xóa bài viết. Chạy SQL trong Supabase Dashboard để tạo function delete_kb_article.");
+                }
+            } else {
+                throw rpcErr;
+            }
+        }
     }
 };

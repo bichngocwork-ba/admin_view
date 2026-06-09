@@ -34,8 +34,8 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
         .custom-shadow { box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.03); }
     </style>
-    <script src="supabase-helper.js"></script>
-    <script src="shared.js"></script>
+    <script src="supabase-helper.js?v=6"></script>
+    <script src="shared.js?v=5"></script>
 </head>
 <body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8]">
 
@@ -162,18 +162,14 @@
                 showToast('Please enter a template title to save as draft.', 'error');
                 return;
             }
-            
-            DB_Helper.createTemplate(title, category || 'Technical Issues', content, false)
-                .then(() => {
-                    showToast('Response template saved as draft!');
-                    setTimeout(() => {
-                        window.location.href = 'response_templates.html';
-                    }, 800);
-                })
-                .catch(err => {
-                    console.error(err);
-                    showToast('Lỗi lưu nháp: ' + err.message, 'error');
-                });
+
+            // Save to localStorage ONLY (do NOT call Supabase — DB DEFAULT sets is_published=true)
+            DB_Helper.saveLocalDraftTemplate(title, category || 'Technical Issues', content);
+
+            showToast('Template đã được lưu nháp!');
+            setTimeout(() => {
+                window.location.href = 'response_templates.html';
+            }, 800);
         }
 
         function formatDoc(cmd) {
