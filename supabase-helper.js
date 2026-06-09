@@ -208,7 +208,7 @@ window.DB_Helper = {
             }
 
             // Convert DB status / priority to Title Case
-            const statusMap = { 'OPEN': 'Open', 'DRAFTING': 'Drafting', 'RESOLVED': 'Resolved' };
+            const statusMap = { 'OPEN': 'Open', 'DRAFTING': 'Drafting', 'IN_PROGRESS': 'Drafting', 'RESOLVED': 'Resolved' };
             const priorityMap = { 'LOW': 'Low', 'MEDIUM': 'Medium', 'HIGH': 'High', 'URGENT': 'High' };
 
             return {
@@ -393,7 +393,7 @@ window.DB_Helper = {
             dbId = data.id;
         }
 
-        const statusMap = { 'Open': 'OPEN', 'Drafting': 'DRAFTING', 'Resolved': 'RESOLVED' };
+        const statusMap = { 'Open': 'OPEN', 'Drafting': 'IN_PROGRESS', 'Resolved': 'RESOLVED' };
         const dbStatus = statusMap[status] || 'OPEN';
 
         const { error } = await this.client
