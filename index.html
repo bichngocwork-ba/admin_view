@@ -41,7 +41,7 @@
         #dashboard-date-picker-chevron.rotated { transform: rotate(180deg); }
     </style>
     <script src="supabase-helper.js?v=6"></script>
-    <script src="shared.js?v=5"></script>
+    <script src="shared.js?v=6"></script>
 </head>
 <body class="bg-[#F4F6F8] dark:bg-[#0b1216] text-on-surface dark:text-[#f0f4f8]">
 
@@ -204,6 +204,7 @@
                 DB_Helper.syncTickets(DB),
             ]);
         }).then(() => {
+            syncDraftStatuses();
             if (DB.tickets.length > 0) {
                 let minD = null;
                 let maxD = null;

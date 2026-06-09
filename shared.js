@@ -168,6 +168,22 @@ function getToastHTML() {
 }
 
 // ============================================================
+// Sync draft statuses from localStorage
+// ============================================================
+function syncDraftStatuses() {
+    const drafts = JSON.parse(localStorage.getItem('ticketDrafts') || '{}');
+    if (window.DB && window.DB.tickets) {
+        window.DB.tickets.forEach(t => {
+            if (drafts[t.id]) {
+                if (t.status !== 'Resolved') t.status = 'Drafting';
+            } else {
+                if (t.status === 'Drafting') t.status = 'Open';
+            }
+        });
+    }
+}
+
+// ============================================================
 // Inject shared UI on DOMContentLoaded
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
