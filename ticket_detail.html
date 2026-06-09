@@ -746,6 +746,8 @@
                             const t = DB.tickets.find(tick => tick.id === activeTicketId);
                             if (t && t.status !== 'Resolved') {
                                 t.status = 'Drafting';
+                                DB_Helper.updateTicketStatus(t.db_id || t.id, 'Drafting')
+                                    .catch(err => console.warn('Could not sync draft status to Supabase:', err.message));
                             }
                             renderTicketDetail();
                         };
@@ -756,6 +758,8 @@
                     const t = DB.tickets.find(tick => tick.id === activeTicketId);
                     if (t && t.status !== 'Resolved') {
                         t.status = 'Drafting';
+                        DB_Helper.updateTicketStatus(t.db_id || t.id, 'Drafting')
+                            .catch(err => console.warn('Could not sync draft status to Supabase:', err.message));
                     }
                     renderTicketDetail();
                 }
@@ -772,6 +776,13 @@
             syncDraftStatuses();
             renderTicketDetail();
             showToast('Draft saved successfully');
+
+            // Sync DRAFTING status to Supabase so customer web also sees In Progress
+            const t = DB.tickets.find(tick => tick.id === activeTicketId);
+            if (t && t.status === 'Drafting') {
+                DB_Helper.updateTicketStatus(t.db_id || t.id, 'Drafting')
+                    .catch(err => console.warn('Could not sync draft status to Supabase:', err.message));
+            }
         }
 
         let isSendingMail = false;
