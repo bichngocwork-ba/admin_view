@@ -347,7 +347,7 @@
 
         function updateOpenBadge() {
             const badge = document.getElementById('open-ticket-count-badge');
-            const openCount = DB.tickets.filter(t => t.status === 'Open').length;
+            const openCount = DB.tickets.filter(t => t.status === 'Open' || t.status === 'Drafting').length;
             if (badge) {
                 badge.textContent = openCount;
                 badge.classList.toggle('hidden', openCount === 0);
