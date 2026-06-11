@@ -33,33 +33,49 @@ The portal consists of the following key files:
 
 ---
 
+## 🔍 Deep Feature Analysis & System Capabilities
+
+### 1. Real-time KPI Dashboard & Metrics Engine (`index.html`)
+The dashboard calculates support metrics dynamically in the browser based on synced data from Supabase:
+* **SLA Compliance %**: Calculated dynamically as:
+  $$\text{SLA Compliance} = \frac{\text{Total Unresolved Tickets} - \text{Overdue Tickets}}{\text{Total Unresolved Tickets}} \times 100$$
+  This allows team leads to instantly evaluate whether the support queue is meeting responsiveness agreements.
+* **Average Handle Time (AHT)**: Averaged over all resolved tickets in the current active filter range:
+  $$\text{AHT} = \frac{\sum \text{handle\_time for each resolved ticket}}{\text{Count of resolved tickets}}$$
+* **Interactive Date-Range Boundaries**: Instead of static calendar limits, the date picker reads the oldest and newest ticket timestamps from the live database at runtime and sets the date bounds dynamically.
+
+### 2. Embedded Metadata & Screening Question Parser (`supabase-helper.js`)
+To maintain consistency when players submit tickets via external forms without structured parameters:
+* The system utilizes a parser that matches markers (`-- Chi tiết danh mục --` or `-- Category Details --`) in the `description` body.
+* It parses fields matching key-value pairs (e.g. `Operating System: Windows 11`) and maps them to technical classifications.
+* **Sanitization Layer**: Once parsed, the raw metadata block is stripped from the description before rendering to the agent, keeping the interface clean and concise while preserving structured data in the sidebar.
+
+### 3. AI-Assisted Resolution Workflows (`ticket_detail.html`)
+* **Contextual Analysis**: Sends ticket metadata (game category, description, and custom questions) to an external webhook (n8n).
+* **Smart Insertion**: The AI-suggested draft is fetched asynchronously, displaying a spinner with the label `Đang lấy phản hồi từ AI...`. Agents can review the suggestion and click a single button to auto-insert it into the email composer.
+
+### 4. Resilience through Local Draft Syncing (`shared.js` & `supabase-helper.js`)
+To prevent data loss from network interruptions or authentication changes:
+* When an agent drafts a reply or article, it is automatically cached in `localStorage` under `localDraftTemplates` or `localDraftArticles`.
+* Upon reloading the page, the client merges local drafts with published items fetched from the Supabase API.
+* Once published, draft items are safely cleared from local storage and written permanently to the cloud DB.
+
+### 5. Canned Template Engine with Placeholder Parsing (`response_templates.html`)
+* **Shortcuts**: Supports quick filtering of email replies using shortcut tags (e.g. `/payment`, `/refund`).
+* **Variable Interpolation**: Dynamically replaces placeholders like `{customer_name}` or `{game_name}` at runtime with the specific ticket details before injecting the template text into the agent's composer.
+
+---
+
 ## ⚙️ Key Technical Implementations
 
-### 1. Embedded Metadata Parsing (Fallback Parser)
-When user tickets are created without structured table fields in `ticket_question_answers`, the system uses a fallback parser inside [supabase-helper.js](file:///e:/Documents/ĐẠI%20HỌC%20FTU/TÀI%20LIỆU%20HỌC/NĂM%20BA/KÌ%202/GĐ2/Các%20vấn%20đề%20đương%20đại%20trong%20KDS/admin/admin%20view/supabase-helper.js):
-* Scans the ticket description for category detail markers (e.g., `-- Chi tiết danh mục --` or `-- Category Details --`).
-* Dynamically extracts screening questions (like `Operating System`, `Issue Type`, `Graphics / CPU Brand`, `Error Code`).
-* Maps these values to update the `PLATFORM` metadata slot (e.g., rendering `Windows 11` instead of `Unknown OS`).
-* Strips the raw metadata text from the description to display clean problem reports in the **ISSUE DESCRIPTION**.
-
-### 2. Real-time Dashboard KPIs & Dynamic Range
-* The dashboard date-picker dynamically adjusts its start and end date range at runtime based on the timestamps of synced tickets in the database.
-* Recalculates metrics (**Total Unresolved Tickets**, **SLA Compliance %**, **Average Handle Time**) in real-time.
-
-### 3. AI-Assisted Workflows
-* Integrating webhook calls to n8n to analyze ticket content and return tailored drafts.
-* Features a loading spinner showing `Đang lấy phản hồi từ AI...` (Retrieving response from AI...) during generation, with a one-click `APPLY DRAFT` insert button.
-
-### 4. Local Storage Fallback & Draft Merging Mechanism
-Since RLS policies might block anonymous or basic users from saving draft templates/articles directly to the cloud DB, the system saves drafts locally in `localStorage` and dynamically merges them with the cloud database items in memory upon page loading:
-* `localDraftTemplates` stores draft response templates.
-* `localDraftArticles` stores draft FAQ articles.
-* When synced from Supabase, `syncTemplates` and `syncArticles` fetch all published cloud items and merge them with locally stored drafts to create a unified UI experience. Once an item is published, it is moved from local storage to the database.
-
-### 5. Security Definer RPC for Safe Deletions
+### 1. Security Definer RPC for Safe Deletions
 Deleting templates and articles is performed via RPC calls (to bypass table-level RLS policies that disallow direct DELETE operations by agent clients):
 * Directly calling `.delete()` on restricted tables will fail due to permissions.
 * The system invokes `.rpc('delete_kb_article', { article_id: id })` or `.rpc('delete_response_template', { template_id: id })` which run with `SECURITY DEFINER` privileges in PostgreSQL.
+
+### 2. Secure Bcrypt Authentication
+* Front-end handles password verification securely using the `bcryptjs` library.
+* Verifies agent passwords against hashed records in the database (`bcrypt.compareSync(password, user.password_hash)`), preventing plaintext password leakage.
 
 ---
 
