@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Create Knowledge Base Article // Agent Portal</title>
+    <title>Create FAQ Article // Agent Portal</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script id="tailwind-config">
@@ -45,15 +45,15 @@
         <main class="p-lg max-w-container-max mx-auto space-y-lg">
             <!-- Back Link -->
             <div>
-                <a class="inline-flex items-center gap-1 text-primary dark:text-[#b4c5ff] hover:underline text-xs font-bold transition-all" href="knowledge_base_management.html">
+                <a class="inline-flex items-center gap-1 text-primary dark:text-[#b4c5ff] hover:underline text-xs font-bold transition-all" href="faq_management.html">
                     <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                    Back to Knowledge Base
+                    Back to FAQs
                 </a>
             </div>
             <!-- Page Header -->
             <header class="mb-lg border-b border-outline-variant dark:border-[#344859] pb-md">
-                <h1 class="font-headline font-extrabold text-2xl text-on-surface dark:text-[#f0f4f8] uppercase tracking-tight">Create New Knowledge Base Article</h1>
-                <p class="text-xs text-on-surface-variant dark:text-[#a0b2c1] mt-1">Draft a new technical guide for agents and players.</p>
+                <h1 class="font-headline font-extrabold text-2xl text-on-surface dark:text-[#f0f4f8] uppercase tracking-tight">Create New FAQ Article</h1>
+                <p class="text-xs text-on-surface-variant dark:text-[#a0b2c1] mt-1">Draft a new FAQ article for agents and players.</p>
             </header>
             <!-- Form card -->
             <div class="bg-white dark:bg-[#111a22] border border-outline-variant dark:border-[#344859] rounded-xl shadow-sm p-lg">
@@ -117,7 +117,7 @@
                     <div class="flex items-center justify-between pt-md border-t border-[#F4F6F8] dark:border-[#344859]">
                         <div class="flex items-center gap-2"></div>
                         <div class="flex gap-sm">
-                            <a href="knowledge_base_management.html" class="px-md py-2 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors inline-block leading-tight flex items-center justify-center">Cancel</a>
+                            <a href="faq_management.html" class="px-md py-2 border border-outline dark:border-[#526c81] text-on-surface-variant dark:text-[#a0b2c1] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors inline-block leading-tight flex items-center justify-center">Cancel</a>
                             <button class="px-md py-2 bg-surface-container-high dark:bg-[#1f2d3a] border border-outline-variant dark:border-[#344859] text-on-surface dark:text-[#f0f4f8] rounded-lg text-xs font-bold hover:bg-surface-container transition-colors shadow-sm" type="button" onclick="saveKbArticleAsDraft()">Save as Draft</button>
                             <button class="px-md py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-sm" type="submit">Publish Article</button>
                         </div>
@@ -131,7 +131,7 @@
 
     <script>
         const user = checkAuth();
-        document.getElementById('nav-container').innerHTML = getNavHTML('knowledge-base');
+        document.getElementById('nav-container').innerHTML = getNavHTML('faqs');
         document.getElementById('toast-wrapper').innerHTML = getToastHTML();
         initUserUI();
 
@@ -174,7 +174,7 @@
 
             showToast('Bài viết đã được lưu nháp!');
             setTimeout(() => {
-                window.location.href = 'knowledge_base_management.html';
+                window.location.href = 'faq_management.html';
             }, 800);
         }
 
@@ -189,9 +189,9 @@
             
             DB_Helper.createArticle(title, category, content, tags, true)
                 .then(() => {
-                    showToast('Knowledge Base article published!');
+                    showToast('FAQ article published!');
                     setTimeout(() => {
-                        window.location.href = 'knowledge_base_management.html';
+                        window.location.href = 'faq_management.html';
                     }, 800);
                 })
                 .catch(err => {

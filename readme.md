@@ -5,7 +5,7 @@ A high-performance, real-time administrative dashboard and workspace designed fo
 ---
 
 ## 📌 Project Overview
-The **Agent Portal** serves as the core interface for support teams to review player tickets, communicate resolutions, manage canned response templates, and maintain a troubleshooting knowledge base.
+The **Agent Portal** serves as the core interface for support teams to review player tickets, communicate resolutions, manage canned response templates, and maintain troubleshooting FAQs.
 
 * **Core Stack**: HTML5, Vanilla JavaScript, Tailwind CSS (Form & Container query plugins).
 * **Database & Auth**: Supabase real-time synchronization, secure bcrypt-based agent authentication.
@@ -26,8 +26,8 @@ The portal consists of the following key files:
 | **`login.html`** | Secure Portal Login | High-security gate verifying agent credentials against Supabase using bcryptjs encryption. |
 | **`response_templates.html`** | Canned Responses | Management dashboard to search, view, and organize quick-reply email templates. |
 | **`add_response_template.html`** | Add Template Form | Standardized compose form supporting dynamic placeholders (e.g., `{customer_name}`). |
-| **`knowledge_base_management.html`**| Knowledge Base | Wiki repository for troubleshooting guides, connection fixes, and billing rules. |
-| **`add_knowledge_base_article.html`**| Add KB Article | Drafting interface to write and keyword-tag troubleshooting guides. |
+| **`faq_management.html`**| FAQs | Wiki repository for troubleshooting FAQs, connection fixes, and billing rules. |
+| **`add_faq_article.html`**| Add FAQ Article | Drafting interface to write and keyword-tag FAQs. |
 | **`shared.js`** | Shared Core Utilities | Manages theme toggling, global active navigation header injection, authentication checks, and toast alerts. |
 | **`supabase-helper.js`** | Supabase SDK Helper | Manages real-time data sync, updates ticket states, posts resolutions, and runs description metadata parsing. |
 

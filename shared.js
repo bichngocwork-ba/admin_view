@@ -50,7 +50,7 @@ function initUserUI() {
 }
 
 function updateNavActive(pageId) {
-    // pageId: 'dashboard' | 'ticket-list' | 'ticket-detail' | 'templates' | 'knowledge-base'
+    // pageId: 'dashboard' | 'ticket-list' | 'ticket-detail' | 'templates' | 'faqs'
     const navItems = document.querySelectorAll('.nav-link');
     navItems.forEach(item => {
         const isActive = item.dataset.page === pageId;
@@ -120,7 +120,7 @@ function initTheme() {
 
 /**
  * Build nav bar HTML string. activePageId is one of:
- * 'dashboard' | 'ticket-list' | 'ticket-detail' | 'templates' | 'knowledge-base'
+ * 'dashboard' | 'ticket-list' | 'ticket-detail' | 'templates' | 'faqs'
  */
 function getNavHTML(activePageId) {
     const navItem = (pageId, href, label, extraContent = '') => {
@@ -142,7 +142,7 @@ function getNavHTML(activePageId) {
             ${navItem('dashboard', 'index.html', 'TICKET DASHBOARD')}
             ${navItem('ticket-list', 'ticket_list.html', 'TICKET LIST', '<span id="open-ticket-count-badge" class="ml-1.5 bg-error text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>')}
             ${navItem('templates', 'response_templates.html', 'RESPONSE TEMPLATES')}
-            ${navItem('knowledge-base', 'knowledge_base_management.html', 'KNOWLEDGE BASE')}
+            ${navItem('faqs', 'faq_management.html', 'FAQs')}
         </nav>
         <div class="flex items-center gap-xs sm:gap-sm shrink-0">
             <button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-xs rounded-full hover:bg-surface-container transition-colors" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
