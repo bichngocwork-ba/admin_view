@@ -1,175 +1,538 @@
-# Game Support // Agent Portal - Technical Documentation
+# Game Support Agent Portal
 
-A high-performance, real-time administrative dashboard and support workspace designed for game support agents. This system is implemented using HTML5, Vanilla JavaScript, Tailwind CSS (utilizing Forms and Container Queries plugins), and Supabase SDK integration.
+Hệ thống quản trị dành cho đội ngũ chăm sóc khách hàng của nền tảng game. Ứng dụng giúp nhân viên hỗ trợ theo dõi hàng đợi ticket, xem nội dung yêu cầu, soạn và gửi phản hồi, sử dụng gợi ý từ AI, quản lý mẫu trả lời và duy trì kho câu hỏi thường gặp.
 
----
+Dự án được xây dựng dưới dạng website tĩnh bằng HTML, Tailwind CSS và Vanilla JavaScript. Giao diện chạy trực tiếp trên trình duyệt, lấy dữ liệu từ Supabase và gọi các workflow n8n cho chức năng gợi ý phản hồi và gửi email.
 
-## 📌 Project Overview
-The **Agent Portal** serves as the core interface for support teams to review player tickets, communicate resolutions, manage canned response templates, and maintain troubleshooting FAQs.
+## Mục lục
 
-* **Core Stack**: HTML5, Vanilla JavaScript, Tailwind CSS.
-* **Database & Auth**: Supabase real-time client SDK, bcryptjs-based password hashing verification.
-* **UX/UI Highlights**: Persistent light/dark theme toggle, custom scrollbars, animated loading feedback, custom overlay modals, and responsive split-pane ticket workspace.
-* **Security & RLS Resilience**: Row-Level Security (RLS) bypass deletion flows via OWNER-privilege database procedures and custom local draft caching fallbacks.
+- [Tính năng chính](#tính-năng-chính)
+- [Công nghệ sử dụng](#công-nghệ-sử-dụng)
+- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
+- [Cấu trúc dự án](#cấu-trúc-dự-án)
+- [Hướng dẫn chạy dự án](#hướng-dẫn-chạy-dự-án)
+- [Cấu hình Supabase](#cấu-hình-supabase)
+- [Mô hình dữ liệu](#mô-hình-dữ-liệu)
+- [Tích hợp n8n](#tích-hợp-n8n)
+- [Dữ liệu lưu trên trình duyệt](#dữ-liệu-lưu-trên-trình-duyệt)
+- [Quy ước phát triển](#quy-ước-phát-triển)
+- [Bảo mật và giới hạn hiện tại](#bảo-mật-và-giới-hạn-hiện-tại)
 
----
+## Tính năng chính
 
-## 📂 File Directory & System Structure
+### 1. Đăng nhập nhân viên hỗ trợ
 
-The portal consists of the following key files:
+Trang `login.html` cung cấp biểu mẫu đăng nhập bằng email và mật khẩu:
 
-| Filename | Component | Detailed Role & Logic |
-| :--- | :--- | :--- |
-| **[`login.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/login.html)** | Secure Login Gate | Authenticates support agents using their email credentials. Dynamically imports Supabase client SDK and BCryptJS libraries. Has password visibility toggle (`visibility` vs `visibility_off`) and handles session caching in `localStorage`. |
-| **[`index.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/index.html)** | KPI Dashboard | Calculates queue metrics dynamically (unresolved counts, SLA percentages, Average Handle Time). Renders CSS status bar charts and SVGs for ticket categories. Integrates a custom dual-calendar date picker with range selection highlights. |
-| **[`ticket_list.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/ticket_list.html)** | Ticket Queue | Lists customer tickets in a data table. Features real-time client-side keyword search, filters for category and status, client-side pagination (10 items/page), and localStorage-based prefilter triggers. |
-| **[`ticket_detail.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/ticket_detail.html)** | Ticket detail Workspace | A split-pane workspace. Provides metadata display, parsed screening questions/answers, customer-agent chat feed, canned template insertion with conflict overwrite modal dialogues, local storage reply draft autosave, n8n webhook AI suggested reply fetching, and mail sending. |
-| **[`response_templates.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/response_templates.html)** | Canned Responses | Displays reply templates categorized by topic. Allows template search, copying content to clipboard, creating/editing templates within a nested detail modal, database deletion via secure RPC execution, and choosing active tickets to inject replies. |
-| **[`add_response_template.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/add_response_template.html)** | Add Template Form | Compose interface for canned templates. Features a simulated toolbar for simple text styles, single-click dynamic template placeholder buttons (`[Customer Name]`, `[Ticket ID]`), and support for publishing directly or saving drafts to local storage. |
-| **[`faq_management.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/faq_management.html)** | FAQs Management | Central knowledge repository interface. Groups support articles by technical department. Supports keyword searches, reading details or editing article titles/body content inside modals, draft management, and RPC deletions. |
-| **[`add_faq_article.html`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/add_faq_article.html)** | Add FAQ Article Form | Compose interface for technical articles. Features formatting tools (Bold, Italic, Underline shortcuts, H2/H3 header tag wrappers), category selectors, comma-separated keywords tag splitting, simulated screenshot file drag-and-drop, and draft saving options. |
-| **[`shared.js`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/shared.js)** | Core Utilities | Orchestrates theme updates (persisting Light/Dark mode classes on document root), session authorization gating, common HTML navigation header injection, globally styled toast notification animations, and local draft status flags synchronization. |
-| **[`supabase-helper.js`](file:///e:/Documents/%C4%90%E1%BA%A0I%20H%E1%BB%8CC%20FTU/T%C3%80I%20LI%E1%BB%86U%20H%E1%BB%8CC/N%C4%82M%20BA/K%C3%8C%202/G%C4%902/C%C3%A1c%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20%C4%91%C6%B0%C6%A1ng%20%C4%91%E1%BA%A1i%20trong%20KDS/admin/admin%20view/supabase-helper.js)** | Supabase SDK Helper | Manages real-time data sync, database inserts/updates, and description metadata parsing. Implements dynamic dependency fetching, bcrypt credential comparisons, RLS-resilient local storage fallback cache, status map constants, and deletion RPC wrappers. |
+- Chỉ chấp nhận tài khoản có vai trò `AGENT` hoặc `ADMIN`.
+- Tải Supabase JavaScript SDK và `bcryptjs` trực tiếp từ CDN.
+- Đọc bản ghi tài khoản từ bảng `users`.
+- So sánh mật khẩu nhập vào với `password_hash` bằng bcrypt.
+- Lưu thông tin phiên hiện tại vào `localStorage`.
+- Tự động chuyển người dùng đã đăng nhập đến `index.html`.
+- Hỗ trợ hiện hoặc ẩn mật khẩu.
 
----
+Các trang quản trị gọi `checkAuth()` trong `shared.js`. Nếu không có phiên hợp lệ trong trình duyệt, người dùng được chuyển về `login.html`.
 
-## 🔍 Deep Feature Analysis & System Capabilities
+> Cơ chế này là xác thực tùy chỉnh phía trình duyệt, không phải Supabase Auth. Xem phần [Bảo mật và giới hạn hiện tại](#bảo-mật-và-giới-hạn-hiện-tại) trước khi triển khai thực tế.
 
-### 1. Secure Authentication Flow (`login.html` & `supabase-helper.js`)
-* **Dynamic Dependency Loading**: Since SDK script tags are loaded on the client side, the portal uses `DB_Helper.init()` to dynamically inject and await JS files for `@supabase/supabase-js@2` and `bcryptjs@2.4.3` via CDN before triggering login calls.
-* **Hashed Password Check**: Rather than sending plaintext credentials, the system pulls user data corresponding to the matching email from the `users` table and evaluates passwords locally using BCrypt:
-  `bcrypt.compareSync(password, user.password_hash)`
-* **Session Persistence**: Upon authentication, a structured `currentUser` payload is stored in `localStorage`:
-  ```json
-  {
-    "id": "uuid-agent-id",
-    "name": "Full Name",
-    "role": "Support Agent / Senior Support Agent (Admin)",
-    "status": "Active",
-    "avatar": "avatar-link-url"
-  }
-  ```
-  Unauthenticated attempts to access dashboard page templates redirect the browser to `login.html` via `checkAuth()`.
+### 2. Dashboard vận hành
 
----
+Trang `index.html` tổng hợp dữ liệu ticket thành các chỉ số và biểu đồ:
 
-### 2. Real-Time KPI Dashboard & Metrics Engine (`index.html`)
-The dashboard calculates support metrics dynamically based on synced tickets data:
-* **SLA Compliance %**: Evaluates the percentage of unresolved tickets that are not currently flagged as overdue:
-  $$\text{SLA Compliance} = \frac{\text{Total Unresolved} - \text{Overdue Unresolved}}{\text{Total Unresolved}} \times 100$$
-* **Average Handle Time (AHT)**: Calculates handle times for resolved tickets:
-  $$\text{AHT} = \frac{\sum_{i=1}^{n} \text{handleTime}_i}{n} \quad (\text{where } n = \text{count of resolved tickets})$$
-  Defaulting missing parameters to a 15-minute standard threshold. Compares average against the default value (15.0m) and styles visual indicator arrows (`arrow_upward`/`arrow_downward`).
-* **Category Navigation Prefiltering**: Clicking on unresolved counts by category triggers filters: it caches the selection in `localStorage.setItem('prefilter_category', category)` and redirects to the queue workspace where filter inputs parse and apply parameters on load.
+- Tổng ticket chưa giải quyết.
+- Tỷ lệ đáp ứng SLA.
+- Thời gian xử lý trung bình.
+- Phân bố ticket theo `Open`, `Drafting` và `Resolved`.
+- Phân bố ticket theo danh mục hỗ trợ.
+- Danh sách ticket gần đây.
+- Tìm ticket theo từ khóa.
+- Lọc dữ liệu theo khoảng ngày bằng bộ chọn lịch hai cột.
 
----
+Tỷ lệ SLA được tính từ số ticket chưa giải quyết và số ticket đang quá hạn:
 
-### 3. Dynamic Visualizations & Math Rendering (`index.html`)
-* **CSS Status Bar Chart**: Renders status counts (`Open`, `In Progress`, `Resolved`) dynamically. The height of each bar is styled using HSL-themed Tailwind metrics, scaled dynamically using maximum value boundaries:
-  $$\text{Height \%} = \frac{\text{Status Count}}{\max(\text{Open}, \text{Drafting}, \text{Resolved})} \times 100$$
-  This ensures the charts are proportioned to fit the card grids. Hover states toggle absolute-positioned tooltip layers.
-* **SVG Pie Chart & Coordinate Trigonometry**: Divides ticket counts dynamically using coordinate arcs:
-  * Computes the angle of the category slice: $\theta = \frac{\text{Category Count}}{\text{Total Tickets}} \times 360^\circ$
-  * Converts polar coordinates to Cartesian coordinates to draw SVG boundaries:
-    $$x_1 = 50 + 50 \times \cos\left(\frac{\text{Accumulated Angle} \times \pi}{180}\right)$$
-    $$y_1 = 50 + 50 \times \sin\left(\frac{\text{Accumulated Angle} \times \pi}{180}\right)$$
-  * Generates SVG path commands:
-    `<path d="M 50 50 L x1 y1 A 50 50 0 largeArc 1 x2 y2 Z" fill="color"></path>`
-  * Fallback handles distributions where a single category is $\ge 99.9\%$, drawing a complete SVG `<circle cx="50" cy="50" r="50">` wrapper. Custom tooltips track absolute cursor mouse positioning over path elements.
+```text
+SLA Compliance =
+  (Unresolved Tickets - Overdue Unresolved Tickets)
+  / Unresolved Tickets
+  × 100
+```
 
----
+Thời gian xử lý trung bình được tính từ trường `handle_time` của các ticket đã giải quyết. Khi dữ liệu không có giá trị phù hợp, giao diện sử dụng mốc 15 phút làm giá trị tham chiếu.
 
-### 4. Custom Date Picker & Boundary Ranges (`index.html`)
-Rather than relying on static limits or default calendar pickers, the portal implements a customized calendar overlay:
-* **Dynamic Range Limits**: Calculates min and max ticket timestamps dynamically from Supabase ticket data at runtime, setting boundaries for calendar inputs.
-* **Dual Calendar Grids**: Renders two calendars side-by-side representing start and end range boundaries. Select components let agents swap years (from 2020 to 2030) and months.
-* **Highlight Render Logic**: Day selections apply visual indicators: active start/end dates get solid primary color backgrounds, while dates lying between selections receive a 10% opacity color block. Date formats are validated using regular expressions (`DD/MM/YYYY`).
+Biểu đồ trạng thái được dựng bằng CSS. Biểu đồ danh mục sử dụng SVG và tính các cung tròn trực tiếp bằng JavaScript, không phụ thuộc thư viện biểu đồ.
 
----
+Khi nhấn vào một danh mục hoặc tìm kiếm từ dashboard, điều kiện lọc được lưu tạm trong `localStorage` rồi chuyển sang `ticket_list.html`.
 
-### 5. Multi-Pane Split-Screen Ticket Detail Workspace (`ticket_detail.html`)
-The workspace provides a split-pane layout to streamline ticket resolution:
-* **Active Queue List**: The left column lists unresolved tickets (status `Open` or `Drafting`). Displays ticket IDs, status badges, customer names, and short description snippets. Clicking a queue card loads the ticket immediately without reloading the page.
-* **Screening Metadata & Embed Parser**: Displays parsed answers to screening questions (e.g. system configurations, operating systems, issue types).
-* **AI-Suggested Replies Webhook Integration**: Requests suggestions by posting ticket metadata to n8n webhook:
-  * Target: `https://tamptc.app.n8n.cloud/webhook/suggest-reply`
-  * JSON Payload structure:
-    ```json
-    {
-      "message": "ticket_description",
-      "customerName": "Customer Name",
-      "customerEmail": "customer@email.com",
-      "category": "Billing & Purchases",
-      "priority": "High / Medium / Low",
-      "ticketId": "TCK-12345"
-    }
-    ```
-  * Displays loading progress animations (`progress_activity` spinner) during async calls and handles fallback retry states. One-click controls insert suggestions directly into the text editor.
-* **Conflict-Detection Template Composer**: Handles template insertion safely. If the composer contains edits that differ from the template text, a dialog modal displays choices to Keep Draft or Overwrite content.
-* **Mail Dispatcher and Resolution Webhook**: Sends replies via n8n sendmail webhook:
-  * Target: `https://tamptc.app.n8n.cloud/webhook/sendmail`
-  * JSON Payload structure:
-    ```json
-    {
-      "action": "send_mail",
-      "ticketId": "TCK-12345",
-      "customerName": "Customer Name",
-      "customerEmail": "recipient@email.com",
-      "subject": "Re: ticket_subject",
-      "replyText": "Composer reply text..."
-    }
-    ```
-  * Upon a successful dispatch, it updates the ticket's database status to `Resolved` via `DB_Helper.saveTicketReply`, logs agent messages to conversation logs, and switches the composer view to a read-only "Resolved Ticket View Pane".
-* **Local Draft Restoration Dialogs**: Unsaved draft text is cached in `localStorage` under `ticketDrafts` keyed by ticket id. If a user navigates away or reloads, the portal displays a modal asking whether to restore the unsaved draft or discard it. Saving drafts updates the ticket's status to `Drafting` in Supabase.
+### 3. Danh sách ticket
 
----
+Trang `ticket_list.html` hiển thị hàng đợi yêu cầu hỗ trợ:
 
-### 6. Embedded Metadata & Screening Question Parser (`supabase-helper.js`)
-To maintain consistency when players submit tickets via external forms without structured parameters:
-* The system utilizes a parser that matches markers (`-- Chi tiết danh mục --` or `-- Category Details --`) in the `description` body.
-* It parses fields matching key-value pairs (e.g. `Operating System: Windows 11`) and maps them to technical classifications.
-* **Sanitization Layer**: Once parsed, the raw metadata block is stripped from the description before rendering to the agent, keeping the interface clean and concise while preserving structured data in the sidebar.
+- Tìm kiếm ticket theo nội dung hiển thị.
+- Lọc theo danh mục và trạng thái.
+- Nhận điều kiện lọc được chuyển từ dashboard.
+- Phân trang phía trình duyệt, 10 ticket mỗi trang.
+- Hiển thị mã ticket, khách hàng, game, danh mục, ngày tạo và trạng thái.
+- Chọn ticket và mở không gian xử lý chi tiết.
 
----
+Ticket được chọn được lưu bằng khóa `activeTicketId`, sau đó trang chuyển đến `ticket_detail.html`.
 
-### 7. RLS-Resilient Local Draft Syncing (`supabase-helper.js` & `shared.js`)
-To ensure draft functionality works when database RLS policies block unauthenticated draft writes:
-* Unsaved templates and FAQs are cached in local browser storage under `localDraftTemplates` or `localDraftArticles`.
-* On data load, `syncTemplates` and `syncArticles` merge local drafts with published items fetched from the database:
-  ```javascript
-  const localDrafts = this.getLocalDraftArticles();
-  localDrafts.forEach(draft => {
-      const alreadyInDB = localDB.articles.find(a => a.id === draft.id);
-      if (!alreadyInDB) {
-          localDB.articles.push(draft);
-      } else {
-          this.removeLocalDraftArticle(draft.id);
-      }
-  });
-  ```
-* Once published to the database, drafts are cleared from local storage.
+### 4. Không gian xử lý ticket
 
----
+Trang `ticket_detail.html` là màn hình làm việc chính của nhân viên hỗ trợ:
 
-## 🎨 Theme & Accessibility Design System
+- Hiển thị danh sách ticket đang hoạt động ở cột bên trái.
+- Chuyển ticket ngay trên cùng trang mà không cần tải lại toàn bộ giao diện.
+- Hiển thị khách hàng, email, game, hệ điều hành, danh mục và nội dung yêu cầu.
+- Hiển thị câu hỏi sàng lọc và câu trả lời liên quan.
+- Hiển thị lịch sử trao đổi giữa khách hàng và nhân viên.
+- Soạn phản hồi trong trình biên tập.
+- Chèn mẫu phản hồi có sẵn.
+- Cảnh báo trước khi ghi đè nội dung đang soạn.
+- Tự động lưu bản nháp theo từng ticket vào `localStorage`.
+- Khôi phục hoặc xóa bản nháp khi mở lại ticket.
+- Lưu trạng thái `Drafting` khi nhân viên lưu nháp.
+- Yêu cầu AI tạo gợi ý trả lời qua webhook n8n.
+- Lưu gợi ý AI vào cột `tickets.ai_suggestion`.
+- Gửi email phản hồi qua webhook n8n.
+- Sau khi gửi thành công, lưu resolution và chuyển ticket sang `Resolved`.
 
-* **Light/Dark Mode Root Toggling**: Uses a single theme control mechanism. The document switches color values by adding `light` or `dark` class wrappers to the `<html>` node. Selection state is saved in `localStorage.setItem('theme', 'dark')` and checked on page load to prevent style flicker.
-* **Tailwind Custom HSL Theme Configuration**:
-  ```javascript
-  colors: {
-    "error": "#ba1a1a", "primary-container": "#2563eb", "error-container": "#ffdad6",
-    "on-error-container": "#93000a", "background": "#f6faff", "on-background": "#141d23",
-    "on-primary": "#ffffff", "on-surface": "#141d23", "outline-variant": "#bcc9ce",
-    "primary": "#004ac6", "primary-fixed": "#dbe1ff", "secondary-container": "#dee0e4",
-    "surface-variant": "#dbe4ed", "surface-container-lowest": "#ffffff",
-    "surface-dim": "#d2dbe4", "on-surface-variant": "#3d494d",
-    "surface-container": "#e6eff8", "surface-container-high": "#e0e9f2",
-    "surface-container-highest": "#dbe4ed", "surface-container-low": "#ecf5fe",
-    "surface": "#f6faff", "inverse-surface": "#293138", "inverse-on-surface": "#e9f2fb",
-    dark: { bg: "#0b1216", surface: "#111a22", "surface-container": "#18242e",
-        "surface-container-high": "#1f2d3a", "surface-container-highest": "#273847",
-        "surface-container-low": "#0d161d", "on-surface": "#f0f4f8",
-        "on-surface-variant": "#a0b2c1", "outline-variant": "#344859", outline: "#526c81" }
-  }
-  ```
-* **Aesthetic Polish Elements**: Form styling templates use container query plugins (`@tailwindcss/container-queries`), subtle box-shadow boundaries (`box-shadow: 0px 4px 24px rgba(0,0,0,0.03)`), transition animations on hovers, custom rounded border sizes, scrollbars styled to light/dark themes, and material-symbols icon integration.
+Nếu bảng `ticket_question_answers` không có dữ liệu, `supabase-helper.js` thử tách metadata từ phần cuối của `description`, bắt đầu bằng một trong hai marker:
+
+```text
+-- Chi tiết danh mục --
+-- Category Details --
+```
+
+Các cặp `Tên trường: Giá trị` được chuyển thành câu hỏi sàng lọc. Khối metadata sau đó được loại khỏi phần mô tả chính trước khi hiển thị.
+
+### 5. Quản lý mẫu phản hồi
+
+Hai trang liên quan:
+
+- `response_templates.html`: danh sách và quản lý mẫu.
+- `add_response_template.html`: tạo mẫu mới.
+
+Chức năng:
+
+- Hiển thị mẫu theo danh mục.
+- Tìm kiếm mẫu trả lời.
+- Xem nội dung chi tiết.
+- Sao chép nội dung vào clipboard.
+- Tạo, sửa, xuất bản hoặc xóa mẫu.
+- Chèn placeholder như `[Customer Name]` và `[Ticket ID]`.
+- Chọn ticket đang hoạt động và đưa mẫu vào trình soạn thảo.
+- Lưu mẫu nháp cục bộ khi chưa xuất bản.
+
+Mẫu đã xuất bản được lưu trong bảng `response_templates`. Mẫu nháp được lưu bằng khóa `localDraftTemplates` trong trình duyệt và được gộp vào dữ liệu khi tải trang.
+
+### 6. Quản lý FAQs
+
+Hai trang liên quan:
+
+- `faq_management.html`: danh sách và quản lý bài viết.
+- `add_faq_article.html`: tạo bài viết mới.
+
+Chức năng:
+
+- Nhóm bài viết theo danh mục.
+- Tìm kiếm theo tiêu đề, nội dung hoặc từ khóa.
+- Xem chi tiết bài viết.
+- Tạo, sửa, xuất bản hoặc xóa bài viết.
+- Gắn danh sách từ khóa phân tách bằng dấu phẩy.
+- Định dạng nội dung với in đậm, in nghiêng, gạch chân và heading.
+- Lưu bài nháp trên trình duyệt.
+- Giao diện tải ảnh minh họa bằng kéo thả.
+
+Các bài đã xuất bản được lưu trong bảng `knowledge_base_articles`. Bài nháp dùng khóa `localDraftArticles`.
+
+Phần chọn ảnh hiện mới xử lý ở giao diện; mã nguồn chưa upload tệp lên Supabase Storage hoặc dịch vụ lưu trữ khác.
+
+### 7. Giao diện dùng chung
+
+`shared.js` cung cấp:
+
+- Đối tượng dữ liệu dùng chung `window.DB`.
+- Kiểm tra phiên và đăng xuất.
+- Thanh điều hướng dùng chung.
+- Hiển thị tên và avatar của nhân viên.
+- Toast thông báo.
+- Chuyển giao diện sáng/tối.
+- Đồng bộ trạng thái ticket với bản nháp cục bộ.
+
+Theme được lưu trong `localStorage`, nhờ đó lựa chọn sáng hoặc tối được giữ lại giữa các lần mở trang.
+
+## Công nghệ sử dụng
+
+| Thành phần | Công nghệ |
+|---|---|
+| Giao diện | HTML5 |
+| Styling | Tailwind CSS qua CDN |
+| Ngôn ngữ | Vanilla JavaScript ES6+ |
+| Font | Google Fonts |
+| Biểu tượng | Material Symbols |
+| Backend as a Service | Supabase |
+| Cơ sở dữ liệu | Supabase PostgreSQL |
+| API dữ liệu | Supabase JavaScript SDK 2 |
+| So sánh mật khẩu | bcryptjs 2.4.3 |
+| Workflow tự động hóa | n8n Webhook |
+| Lưu trạng thái phía client | Web Storage API |
+
+Dự án không có `package.json`, framework frontend, bundler hoặc bước build.
+
+## Kiến trúc hệ thống
+
+```mermaid
+flowchart LR
+    U["Support Agent"] --> B["Trình duyệt"]
+    B --> UI["HTML + Tailwind CSS + JavaScript"]
+    UI --> H["supabase-helper.js"]
+    H --> DB["Supabase PostgreSQL"]
+    UI --> LS["localStorage"]
+    UI --> AI["n8n: suggest-reply"]
+    UI --> MAIL["n8n: sendmail"]
+    MAIL --> DB
+```
+
+Mỗi trang HTML là một màn hình độc lập, chứa phần lớn giao diện và logic riêng của màn hình đó. Hai tệp JavaScript dùng chung là:
+
+- `shared.js`: phiên cục bộ, navigation, theme, toast và dữ liệu trong bộ nhớ.
+- `supabase-helper.js`: khởi tạo SDK, truy vấn dữ liệu, biến đổi dữ liệu và thao tác ghi Supabase.
+
+Khi tải một trang quản trị, luồng chính thường là:
+
+1. Kiểm tra `currentUser`.
+2. Khởi tạo `DB_Helper`.
+3. Tải dữ liệu từ Supabase vào `window.DB`.
+4. Gộp các bản nháp đang nằm trong `localStorage`.
+5. Render giao diện và gắn các sự kiện tương tác.
+
+## Cấu trúc dự án
+
+```text
+admin_view/
+├── index.html
+├── login.html
+├── ticket_list.html
+├── ticket_detail.html
+├── response_templates.html
+├── add_response_template.html
+├── faq_management.html
+├── add_faq_article.html
+├── shared.js
+├── supabase-helper.js
+├── test_delete.ps1
+├── readme.md
+└── .gitignore
+```
+
+| Tệp | Vai trò |
+|---|---|
+| `login.html` | Đăng nhập nhân viên |
+| `index.html` | Dashboard KPI, biểu đồ và bộ lọc ngày |
+| `ticket_list.html` | Danh sách, tìm kiếm, lọc và phân trang ticket |
+| `ticket_detail.html` | Xử lý ticket, bản nháp, AI và gửi phản hồi |
+| `response_templates.html` | Quản lý mẫu phản hồi |
+| `add_response_template.html` | Tạo mẫu phản hồi |
+| `faq_management.html` | Quản lý FAQs |
+| `add_faq_article.html` | Tạo bài FAQ |
+| `shared.js` | Tiện ích và UI dùng chung |
+| `supabase-helper.js` | Kết nối và thao tác dữ liệu Supabase |
+| `test_delete.ps1` | Script thử gọi REST DELETE cho một template cụ thể |
+
+## Hướng dẫn chạy dự án
+
+### Yêu cầu
+
+- Trình duyệt hiện đại.
+- Kết nối Internet để tải Tailwind CSS, Supabase SDK, bcryptjs, Google Fonts và Material Symbols.
+- Python, Node.js hoặc một HTTP server tĩnh tương đương.
+- Supabase project có schema và policy tương thích.
+- Các workflow n8n đang hoạt động nếu cần gợi ý AI và gửi email.
+
+### Clone repository
+
+```powershell
+git clone https://github.com/bichngocwork-ba/admin_view.git
+cd admin_view
+```
+
+### Chạy bằng Python
+
+```powershell
+py -m http.server 8080
+```
+
+Sau đó truy cập:
+
+```text
+http://localhost:8080/login.html
+```
+
+Nếu máy sử dụng lệnh `python`:
+
+```powershell
+python -m http.server 8080
+```
+
+### Chạy bằng Node.js
+
+```powershell
+npx serve .
+```
+
+Không nên mở trực tiếp bằng `file://`, vì hành vi tải script CDN, request API và điều hướng có thể khác so với khi chạy qua HTTP.
+
+## Cấu hình Supabase
+
+Thông tin kết nối hiện được khai báo trực tiếp ở đầu `supabase-helper.js`:
+
+```javascript
+const SUPABASE_URL = "https://<project-ref>.supabase.co";
+const SUPABASE_KEY = "<anon-key>";
+```
+
+Client được khởi tạo tại:
+
+```javascript
+window.DB_Helper.client
+```
+
+Anon key có thể xuất hiện trong frontend, nhưng quyền truy cập thực tế phải được kiểm soát bằng Row Level Security, database grants và RPC phù hợp. Không đưa `service_role` key vào repository hoặc mã chạy trên trình duyệt.
+
+### RPC được sử dụng
+
+| RPC | Tham số | Mục đích |
+|---|---|---|
+| `delete_response_template` | `template_id` | Xóa mẫu phản hồi |
+| `delete_kb_article` | `article_id` | Xóa bài FAQ |
+
+Nếu RPC không tồn tại, frontend thử `DELETE` trực tiếp trên bảng. Thao tác chỉ thành công khi policy cho phép.
+
+Repository không chứa migration SQL, do đó schema, enum, foreign key, RLS policy và function phải được thiết lập riêng trong Supabase.
+
+## Mô hình dữ liệu
+
+Mô hình dưới đây được tổng hợp từ các câu truy vấn và payload thực tế trong mã nguồn.
+
+```mermaid
+erDiagram
+    USERS ||--o{ TICKETS : "customer_id"
+    USERS ||--o{ RESPONSE_TEMPLATES : "created_by"
+    USERS ||--o{ KNOWLEDGE_BASE_ARTICLES : "author_id"
+    USERS ||--o{ TICKET_RESOLUTIONS : "resolved_by"
+    GAMES ||--o{ TICKETS : "game"
+    TICKET_CATEGORIES ||--o{ TICKETS : "category"
+    TICKET_CATEGORIES ||--o{ RESPONSE_TEMPLATES : "category_id"
+    TICKETS ||--o{ TICKET_RESOLUTIONS : "ticket_id"
+    TICKETS ||--o{ TICKET_QUESTION_ANSWERS : "ticket"
+    CATEGORY_QUESTIONS ||--o{ TICKET_QUESTION_ANSWERS : "question"
+```
+
+### `users`
+
+Các cột được frontend sử dụng:
+
+- `id`
+- `email`
+- `full_name`
+- `role`: `AGENT` hoặc `ADMIN`
+- `password_hash`
+
+### `tickets`
+
+- `id`
+- `ticket_number`
+- `customer_id`
+- `game_id` hoặc quan hệ `game`
+- `category_id` hoặc quan hệ `category`
+- `description`
+- `status`: frontend đọc `OPEN`, `DRAFTING`, `IN_PROGRESS`, `RESOLVED`
+- `priority`: frontend đọc `LOW`, `MEDIUM`, `HIGH`, `URGENT`
+- `ai_suggestion`
+- `overdue`
+- `handle_time`
+- `created_at`
+- `updated_at`
+
+Khi ghi trạng thái, giao diện ánh xạ:
+
+| Trạng thái UI | Giá trị Supabase |
+|---|---|
+| `Open` | `OPEN` |
+| `Drafting` | `IN_PROGRESS` |
+| `Resolved` | `RESOLVED` |
+
+### `games`
+
+- `id`
+- `game_name`
+
+### `ticket_categories`
+
+- `id`
+- `category_name`
+
+### `category_questions`
+
+- `id`
+- `field_key`
+- `question_label`
+
+### `ticket_question_answers`
+
+- `ticket_id`
+- `question_id`
+- `answer_value`
+
+### `ticket_resolutions`
+
+- `id`
+- `ticket_id`
+- `resolution_content`
+- `resolved_by`
+- `resolved_at`
+
+### `response_templates`
+
+- `id`
+- `template_name`
+- `category_id`
+- `template_content`
+- `created_by`
+- `is_published`
+- `created_at`
+- `updated_at`
+
+### `knowledge_base_articles`
+
+- `id`
+- `title`
+- `category`
+- `content`
+- `tags`: frontend đang xử lý dưới dạng chuỗi phân tách bằng dấu phẩy
+- `author_id`
+- `view_count`
+- `is_published`
+- `created_at`
+- `updated_at`
+
+## Tích hợp n8n
+
+### Gợi ý phản hồi bằng AI
+
+`ticket_detail.html` gửi request `POST` đến webhook `suggest-reply` với payload:
+
+```json
+{
+  "message": "Nội dung ticket",
+  "customerName": "Tên khách hàng",
+  "customerEmail": "customer@example.com",
+  "category": "Technical Issues",
+  "priority": "High",
+  "ticketId": "TCK-12345"
+}
+```
+
+Phản hồi được đưa vào vùng gợi ý AI và có thể được chèn vào trình soạn thảo. Nội dung cũng được lưu vào `tickets.ai_suggestion`.
+
+### Gửi email
+
+Webhook `sendmail` nhận payload:
+
+```json
+{
+  "action": "send_mail",
+  "ticketId": "TCK-12345",
+  "customerName": "Tên khách hàng",
+  "customerEmail": "customer@example.com",
+  "subject": "Re: Ticket subject",
+  "replyText": "Nội dung phản hồi"
+}
+```
+
+Sau khi webhook báo thành công, frontend:
+
+1. Cập nhật ticket sang `RESOLVED`.
+2. Thêm bản ghi vào `ticket_resolutions`.
+3. Xóa bản nháp cục bộ.
+4. Chuyển giao diện sang chế độ chỉ đọc.
+
+URL webhook hiện được viết trực tiếp trong `ticket_detail.html`. Khi triển khai môi trường khác, cần thay URL hoặc đưa cấu hình ra một tệp riêng.
+
+## Dữ liệu lưu trên trình duyệt
+
+| Khóa | Nội dung |
+|---|---|
+| `currentUser` | Thông tin nhân viên đang đăng nhập |
+| `theme` | `light` hoặc `dark` |
+| `activeTicketId` | Ticket đang được chọn |
+| `ticketDrafts` | Nội dung phản hồi nháp theo ticket |
+| `localDraftTemplates` | Mẫu phản hồi chưa xuất bản |
+| `localDraftArticles` | Bài FAQ chưa xuất bản |
+| `prefilter_category` | Danh mục chuyển từ dashboard |
+| `prefilter_search` | Từ khóa chuyển từ dashboard |
+
+Dữ liệu `localStorage` chỉ tồn tại trên cùng trình duyệt và thiết bị. Các bản nháp này không tự đồng bộ giữa nhiều máy, tài khoản trình duyệt hoặc cửa sổ riêng tư.
+
+## Quy ước phát triển
+
+- Dùng `async/await` cho thao tác Supabase và webhook.
+- Truy cập backend qua `window.DB_Helper`.
+- Dữ liệu đang hiển thị được giữ trong `window.DB`.
+- Dùng Tailwind utility classes; CSS riêng nằm trong từng trang.
+- Các trang dùng đường dẫn tương đối để có thể chạy trên static host.
+- Mỗi trang cần đăng nhập phải gọi `checkAuth()`.
+- Thay đổi dữ liệu phải cập nhật Supabase trước khi cập nhật giao diện.
+- Các bản nháp cục bộ cần được xóa sau khi xuất bản hoặc gửi thành công.
+- Không commit service key, mật khẩu thật hoặc credential n8n.
+
+## Bảo mật và giới hạn hiện tại
+
+### 1. Xác thực phía trình duyệt
+
+Frontend truy vấn `users.password_hash` bằng anon key và chạy bcrypt trong trình duyệt. Cách làm này khiến hash mật khẩu có thể bị đọc bởi client nếu RLS cho phép truy vấn đăng nhập, đồng thời `currentUser` có thể bị sửa trong DevTools.
+
+Đối với production, nên chuyển sang Supabase Auth hoặc một API/Edge Function phía server. Client chỉ nên nhận session token, không được đọc `password_hash`.
+
+### 2. Phân quyền
+
+Ẩn nút hoặc kiểm tra `currentUser` không phải cơ chế bảo mật đầy đủ. Tất cả bảng, view, RPC và thao tác ghi phải có RLS policy hoặc kiểm tra quyền phía server.
+
+Đặc biệt, RPC dùng `SECURITY DEFINER` chỉ nên:
+
+- Xác minh danh tính người gọi.
+- Kiểm tra vai trò được phép.
+- Đặt `search_path` an toàn.
+- Chỉ nhận và xử lý đúng bản ghi cần thiết.
+- Không cấp `EXECUTE` rộng hơn nhu cầu.
+
+### 3. Tính toàn vẹn khi gửi phản hồi
+
+Gửi email và cập nhật trạng thái ticket là hai request riêng biệt. Email có thể đã gửi nhưng thao tác ghi Supabase thất bại, hoặc ngược lại. Production nên dùng một backend workflow có idempotency và cập nhật dữ liệu theo một quy trình có kiểm soát.
+
+### 4. Secrets và endpoint
+
+Anon key và webhook URL đang được viết trực tiếp trong frontend. Anon key chỉ an toàn khi RLS đúng; webhook công khai cần xác thực, giới hạn tần suất, CORS phù hợp và kiểm tra payload.
+
+### 5. Draft cục bộ
+
+Mẫu phản hồi và FAQ ở trạng thái nháp chỉ nằm trong `localStorage`. Xóa dữ liệu trình duyệt sẽ làm mất draft. Draft cũng không được chia sẻ giữa nhân viên.
+
+### 6. Chất lượng và triển khai
+
+Repository hiện chưa có:
+
+- Migration Supabase.
+- Dữ liệu mẫu.
+- Test tự động.
+- Linter hoặc formatter.
+- Pipeline CI/CD.
+- Quản lý cấu hình theo môi trường.
+- Quy trình upload ảnh FAQ hoàn chỉnh.
+
+Trước khi dùng trong môi trường thực tế, nên bổ sung migration có version, kiểm thử các luồng quan trọng, logging, xử lý lỗi tập trung và tách cấu hình development/staging/production.
+
+## Phạm vi dự án
+
+Đây là giao diện quản trị phục vụ mô phỏng quy trình hỗ trợ khách hàng trong lĩnh vực game. Dự án phù hợp cho học tập, trình diễn luồng nghiệp vụ và phát triển prototype. Các giới hạn bảo mật và vận hành nêu trên cần được xử lý trước khi hệ thống quản lý dữ liệu khách hàng thực tế.
